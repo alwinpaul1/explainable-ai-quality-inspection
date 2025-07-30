@@ -79,3 +79,7 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Documentation files
+CLAUDE.md
+QUICK_START.md
