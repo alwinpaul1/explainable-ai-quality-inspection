@@ -45,14 +45,18 @@ class QualityInspectionDataset(Dataset):
         """Load image paths and labels."""
         samples = []
         
-        # For casting dataset structure
+        # For casting dataset structure - check new raw directory first
+        raw_train_dir = os.path.join(self.data_dir, 'raw', 'train')
+        raw_test_dir = os.path.join(self.data_dir, 'raw', 'test')
+        
+        # Fallback to old structure for backward compatibility
         train_dir = os.path.join(self.data_dir, 'train')
         test_dir = os.path.join(self.data_dir, 'test')
         
         if self.split == 'train':
-            base_dir = train_dir
+            base_dir = raw_train_dir if os.path.exists(raw_train_dir) else train_dir
         else:
-            base_dir = test_dir
+            base_dir = raw_test_dir if os.path.exists(raw_test_dir) else test_dir
             
         if not os.path.exists(base_dir):
             # Try alternative structure

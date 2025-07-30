@@ -1,0 +1,39 @@
+# Configuration file for Explainable AI Quality Inspection
+# This file contains default configuration parameters
+
+# Model configuration
+model:
+  type: "resnet50"  # Options: resnet50, efficientnet, vgg16, simple
+  num_classes: 2
+  pretrained: true
+  dropout: 0.5
+
+# Training configuration
+training:
+  epochs: 20
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 1e-4
+  optimizer: "adam"  # Options: adam, sgd
+  scheduler: "plateau"  # Options: plateau, cosine, none
+
+# Data configuration
+data:
+  dataset: "casting"  # Options: casting, mvtec, neu
+  data_dir: "data"
+  num_workers: 4
+  validation_split: 0.2
+  test_split: 0.1
+
+# Explainability configuration
+explainability:
+  methods: ["lime", "integrated_gradients", "gradcam"]
+  num_samples: 5
+
+# Paths
+paths:
+  models: "results/models"
+  logs: "results/logs"
+  experiments: "results/experiments"
+  explanations: "results/explanations"
+  reports: "results/reports"

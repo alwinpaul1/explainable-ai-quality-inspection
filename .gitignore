@@ -50,7 +50,8 @@ results/logs/*.png
 results/logs/*.json
 
 # Data (optional - uncomment if you don't want to upload dataset)
-# data/
+# data/raw/
+# data/processed/
 
 # Jupyter
 .ipynb_checkpoints/
