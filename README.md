@@ -1,27 +1,27 @@
 # Explainable AI Quality Inspection
 
-Automated defect detection for industrial quality inspection with PyTorch training, comprehensive evaluation, advanced explainability methods, and an interactive Streamlit dashboard.
+Automated defect detection for industrial quality inspection using TensorFlow/Keras following notebook approach, with comprehensive evaluation, advanced explainability methods, and an interactive Streamlit dashboard.
 
-![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg) ![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-orange.svg) ![MPS Support](https://img.shields.io/badge/Apple%20Silicon-MPS%20Support-green.svg)
+![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg) ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.13+-orange.svg) ![uv](https://img.shields.io/badge/uv-package%20manager-green.svg)
 
 ## Overview
-This repository provides a complete end-to-end pipeline for industrial quality inspection:
-- **🤖 Advanced CNN Training**: ResNet50, EfficientNet, VGG16 architectures with optimizations
-- **📊 Comprehensive Evaluation**: Detailed metrics, confusion matrices, ROC curves, per-class analysis
-- **🔍 Multi-Method Explainability**: LIME, Integrated Gradients, GradCAM, and Occlusion analysis
+This repository provides a complete end-to-end pipeline for industrial quality inspection following the notebook approach:
+- **🤖 Simple CNN Training**: Notebook-style Sequential CNN with Conv2D layers and extensive augmentation
+- **📊 Comprehensive Evaluation**: Detailed metrics, confusion matrices, ROC curves, threshold-based classification
+- **🔍 Multi-Method Explainability**: LIME, SHAP, and other explainability methods for TensorFlow models
 - **🖥️ Interactive Dashboard**: Streamlit-based UI with real-time analysis and batch processing
-- **🚀 Production-Ready**: Early stopping, learning rate scheduling, MPS/GPU support
+- **🚀 Production-Ready**: TensorFlow/Keras training with ModelCheckpoint and 300x300 grayscale processing
 
 The project exposes a single CLI entry point in [`main.py`](main.py) with modes: `full`, `train`, `evaluate`, `explain`, and an interactive dashboard in [`dashboard/app.py`](dashboard/app.py).
 
 ## 🌟 Key Features
 
-### Training & Optimization
-- **Advanced Architectures**: ResNet50, EfficientNet-B0, VGG16, Simple CNN
-- **Smart Training**: Early stopping, learning rate warmup, cosine annealing
-- **Regularization**: Weight decay, dropout, advanced data augmentation
-- **Platform Support**: Automatic MPS (Apple Silicon), CUDA, CPU detection
-- **Robust Data Handling**: Automatic dummy dataset generation for testing
+### Training & Optimization (Notebook Style)
+- **Simple CNN Architecture**: Sequential model with 32→16 Conv2D filters, MaxPooling, Dense layers
+- **Notebook Training**: 25 epochs, 150 steps/epoch, Adam optimizer, binary crossentropy
+- **Extensive Augmentation**: 360° rotation, shifts, brightness, flips following notebook parameters
+- **Platform Support**: TensorFlow GPU detection with memory growth, CPU fallback
+- **Grayscale Processing**: 300x300 pixel images following notebook approach
 
 ### Evaluation & Analysis
 - **Comprehensive Metrics**: Accuracy, precision, recall, F1-score, AUC
@@ -30,10 +30,10 @@ The project exposes a single CLI entry point in [`main.py`](main.py) with modes:
 - **Per-Class Performance**: Detailed class-wise performance breakdown
 
 ### Explainability Methods
-- **LIME**: Local Interpretable Model-agnostic Explanations
-- **Integrated Gradients**: Attribution-based explanations with baseline comparison
-- **GradCAM**: Gradient-weighted Class Activation Mapping for CNN visualization
-- **Occlusion**: Systematic feature importance through occlusion analysis
+- **LIME**: Local Interpretable Model-agnostic Explanations for TensorFlow models
+- **SHAP**: SHapley Additive exPlanations for feature importance
+- **TensorFlow Compatible**: Adapted explainability methods for .h5 model files
+- **Threshold Analysis**: Binary classification with configurable threshold (default: 0.5)
 
 ### Interactive Dashboard
 - **4-Tab Interface**: Overview, Single Image Analysis, Model Performance, Batch Analysis
@@ -50,19 +50,15 @@ The project exposes a single CLI entry point in [`main.py`](main.py) with modes:
 │   └── app.py                   # Streamlit dashboard application
 ├── src/
 │   ├── data/
-│   │   ├── dataset.py           # Core dataset handling
-│   │   ├── enhanced_dataset.py  # Enhanced dataset with advanced features
-│   │   └── advanced_augmentation.py  # Advanced data augmentation
+│   │   └── dataset.py           # TensorFlow data generators and notebook-style processing
 │   ├── models/
-│   │   └── cnn_model.py         # Model creation and architectures
+│   │   └── cnn_model.py         # Simple CNN creation following notebook architecture
 │   ├── training/
-│   │   ├── train_model.py       # Main training module
-│   │   ├── enhanced_regularization_trainer.py  # Advanced training
-│   │   └── improved_trainer.py  # Enhanced training features
+│   │   └── train_model.py       # Keras training with notebook approach
 │   ├── evaluation/
-│   │   └── evaluate_model.py    # Comprehensive model evaluation
+│   │   └── evaluate_model.py    # TensorFlow model evaluation with .h5 loading
 │   ├── explainability/
-│   │   └── explain_model.py     # Multi-method explainability
+│   │   └── explain_model.py     # TensorFlow-compatible explainability methods
 │   └── utils/
 │       ├── metrics.py           # Evaluation metrics and calculations
 │       └── visualization.py     # Plotting and visualization utilities
@@ -74,8 +70,8 @@ The project exposes a single CLI entry point in [`main.py`](main.py) with modes:
 │       ├── defective/
 │       └── ok/
 └── results/                    # Output directory
-    ├── models/                 # Trained model checkpoints
-    ├── logs/                   # Training logs and history
+    ├── models/                 # Trained Keras models (.h5 files)
+    ├── logs/                   # Training history and curves (notebook style)
     ├── explanations/           # Generated explanations
     ├── reports/               # Evaluation reports and plots
     └── experiments/           # Experiment tracking
@@ -85,26 +81,35 @@ The project exposes a single CLI entry point in [`main.py`](main.py) with modes:
 
 ### Prerequisites
 - Python 3.8+ (3.9+ recommended)
-- macOS (for MPS support), Linux, or Windows
+- [uv](https://docs.astral.sh/uv/) package manager (recommended for fast dependency management)
+- macOS, Linux, or Windows
 - 4GB+ RAM (8GB+ recommended for training)
 
-### Installation
+### Installation with uv (Recommended)
 ```bash
 # 1. Clone repository
 git clone https://github.com/alwinpaul1/explainable-ai-quality-inspection.git
 cd explainable-ai-quality-inspection
 
-# 2. Create virtual environment
-python3 -m venv venv
+# 2. Create virtual environment with uv
+uv venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# 3. Install dependencies
+# 3. Install dependencies with uv (much faster than pip)
+uv pip install -r requirements.txt
+
+# 4. Verify installation
+python -c "import tensorflow as tf; print('TensorFlow:', tf.__version__)"
+python -c "from src.data.dataset import get_data_generators; print('✅ Data generators working')"
+```
+
+### Alternative Installation with pip
+```bash
+# If you don't have uv installed
+python3 -m venv venv
+source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-
-# 4. Verify installation (optional)
-python -c "import torch; print('PyTorch:', torch.__version__)"
-python -c "import torch; print('MPS available:', torch.backends.mps.is_available())"
 ```
 
 ## 📊 Dataset Structure
@@ -131,9 +136,9 @@ data/
 
 ### Supported Formats
 - **Image Types**: `.jpg`, `.jpeg`, `.png`
-- **Minimum Size**: 32x32 pixels
-- **Recommended Size**: 224x224 pixels or larger
-- **Color Channels**: RGB (3-channel)
+- **Processing Size**: 300x300 pixels (notebook approach)
+- **Color Channels**: Grayscale (1-channel) following notebook
+- **Automatic Resizing**: Images automatically resized to 300x300
 
 **Important Notes**:
 - **Real Dataset Required**: This system is designed for the actual casting product dataset
@@ -144,13 +149,13 @@ data/
 
 ## 🚀 Quick Start
 
-### Option 1: Automatic Download & Complete Pipeline
+### Option 1: Automatic Download & Complete Pipeline (Notebook Style)
 ```bash
 # Activate environment
 source venv/bin/activate
 
-# Download real casting dataset and run full pipeline
-python main.py --mode full --download-data --epochs 30
+# Download real casting dataset and run full pipeline with notebook parameters
+python main.py --mode full --download-data --epochs 25 --batch-size 64
 
 # Launch interactive dashboard
 streamlit run dashboard/app.py
@@ -171,16 +176,16 @@ python main.py --mode full --epochs 30
 streamlit run dashboard/app.py
 ```
 
-### Option 3: Step-by-Step Training
+### Option 3: Step-by-Step Training (Notebook Style)
 ```bash
-# 1. Train model with optimal settings
-python main.py --mode train --epochs 50 --early-stopping-patience 10
+# 1. Train model with notebook settings
+python main.py --mode train --epochs 25 --batch-size 64 --steps-per-epoch 150
 
 # 2. Evaluate trained model
-python main.py --mode evaluate --model-path results/models/best_model.pth
+python main.py --mode evaluate --model-path results/models/cnn_casting_inspection_model.h5
 
 # 3. Generate explanations
-python main.py --mode explain --model-path results/models/best_model.pth --num-explanation-samples 10
+python main.py --mode explain --model-path results/models/cnn_casting_inspection_model.h5 --num-explanation-samples 10
 
 # 4. Launch dashboard
 streamlit run dashboard/app.py
@@ -208,20 +213,19 @@ python main.py [--mode MODE] [OPTIONS]
 --data-dir DATA_DIR           # Dataset directory (default: data)
 --download-data               # Download casting dataset before training
 --create-dummy                # Create dummy dataset for testing
---model-type {resnet50,efficientnet,vgg16,simple}  # Architecture (default: resnet50)
+--model-type {simple}  # Architecture (only simple CNN supported, following notebook)
 --model-path MODEL_PATH       # Path to saved model (for eval/explain)
 --num-classes NUM_CLASSES     # Number of classes (default: 2)
 ```
 
-#### Training Parameters
+#### Training Parameters (Notebook Style)
 ```bash
---epochs EPOCHS              # Training epochs (default: 30)
---batch-size BATCH_SIZE       # Batch size (default: 16)
---learning-rate LR            # Learning rate (default: 0.0001)
---weight-decay WD            # Weight decay (default: 0.01)
---optimizer {adam,sgd}        # Optimizer choice (default: adam)
---scheduler {plateau,cosine,warmup_cosine,none}  # LR scheduler (default: warmup_cosine)
---early-stopping-patience P   # Early stopping patience (default: 10)
+--epochs EPOCHS              # Training epochs (default: 25, notebook style)
+--batch-size BATCH_SIZE       # Batch size (default: 64, notebook style)
+--steps-per-epoch STEPS       # Steps per epoch (default: 150, notebook style)
+--validation-steps STEPS      # Validation steps (default: 150, notebook style)
+--optimizer {adam}            # Optimizer (adam only, following notebook)
+--image-size SIZE             # Image size (default: 300, notebook uses 300x300)
 ```
 
 #### Output & System Options
@@ -229,35 +233,33 @@ python main.py [--mode MODE] [OPTIONS]
 --save-dir SAVE_DIR          # Model save directory (default: results/models)
 --log-dir LOG_DIR            # Log directory (default: results/logs)
 --num-explanation-samples N   # Number of samples to explain (default: 5)
---num-workers NUM_WORKERS     # Data loading workers (default: 2)
---gpu                        # Use GPU if available
+--gpu                        # Use GPU if available (TensorFlow auto-detection)
+--seed SEED                  # Random seed for reproducibility (default: 123)
 ```
 
 ### Example Commands
 
-#### Advanced Training
+#### Notebook-Style Training
 ```bash
-# Train EfficientNet with cosine annealing
+# Train with notebook defaults
 python main.py --mode train \
-  --model-type efficientnet \
-  --epochs 100 \
-  --batch-size 8 \
-  --learning-rate 0.0001 \
-  --scheduler warmup_cosine \
-  --early-stopping-patience 15
+  --epochs 25 \
+  --batch-size 64 \
+  --steps-per-epoch 150 \
+  --validation-steps 150
 
-# Train with specific regularization
+# Train with custom image size (notebook uses 300x300)
 python main.py --mode train \
-  --weight-decay 0.05 \
-  --batch-size 8 \
-  --optimizer sgd
+  --image-size 300 \
+  --epochs 25 \
+  --batch-size 64
 ```
 
 #### Detailed Evaluation
 ```bash
-# Evaluate with custom model
+# Evaluate with Keras model
 python main.py --mode evaluate \
-  --model-path results/models/best_model.pth \
+  --model-path results/models/cnn_casting_inspection_model.h5 \
   --data-dir ./custom_test_data \
   --batch-size 64
 ```
@@ -266,14 +268,14 @@ python main.py --mode evaluate \
 ```bash
 # Generate explanations for specific samples
 python main.py --mode explain \
-  --model-path results/models/best_model.pth \
+  --model-path results/models/cnn_casting_inspection_model.h5 \
   --num-explanation-samples 20
 
-# Explain single image with all methods
+# Explain single image with TensorFlow-compatible methods
 python -m src.explainability.explain_model \
-  --model-path results/models/best_model.pth \
+  --model-path results/models/cnn_casting_inspection_model.h5 \
   --image-path path/to/image.jpg \
-  --methods lime integrated_gradients gradcam \
+  --methods lime shap \
   --save-path explanation.png
 ```
 
@@ -287,9 +289,9 @@ The Streamlit dashboard provides four main interfaces:
 - Quick start code examples
 
 ### 2. 🔍 Single Image Analysis Tab
-- **Upload Interface**: Drag-and-drop image upload
-- **Real-time Prediction**: Instant classification with confidence scores
-- **Multi-Method Explanations**: LIME, Integrated Gradients, GradCAM
+- **Upload Interface**: Drag-and-drop image upload (auto-converts to 300x300 grayscale)
+- **Real-time Prediction**: Instant classification with confidence scores using threshold
+- **Multi-Method Explanations**: LIME, SHAP for TensorFlow models
 - **Interactive Visualization**: Side-by-side original and explanation views
 
 ### 3. 📊 Model Performance Tab
@@ -316,33 +318,33 @@ streamlit run dashboard/app.py --server.port 8502
 streamlit run dashboard/app.py --server.headless true --server.address 0.0.0.0
 ```
 
-## 🍎 Apple Silicon (MPS) Support
+## 🖥️ TensorFlow GPU Support
 
 ### Automatic Detection
-The system automatically detects and uses the optimal compute device:
-- **Apple Silicon Macs**: MPS (Metal Performance Shaders)
-- **NVIDIA GPUs**: CUDA
-- **Fallback**: CPU
+TensorFlow automatically detects and uses available compute devices:
+- **NVIDIA GPUs**: CUDA support with automatic memory growth
+- **Apple Silicon**: TensorFlow Metal support (if available)
+- **Fallback**: CPU (following notebook approach)
 
 ### Verification
 ```bash
-# Check MPS availability
-python -c "import torch; print('MPS available:', torch.backends.mps.is_available())"
+# Check TensorFlow GPU availability
+python -c "import tensorflow as tf; print('GPU available:', tf.config.list_physical_devices('GPU'))"
 
-# Test MPS training
-python main.py --mode train --epochs 1 --batch-size 4
+# Test GPU training
+python main.py --mode train --epochs 1 --batch-size 4 --gpu
 ```
 
-### Troubleshooting MPS
+### GPU Configuration
 ```bash
-# Enable CPU fallback for MPS issues
-export PYTORCH_ENABLE_MPS_FALLBACK=1
+# Enable GPU with memory growth
+python main.py --mode train --gpu
 
-# Force CPU usage (note: no --device flag, use environment variable)
-PYTORCH_ENABLE_MPS_FALLBACK=1 python main.py --mode train
+# Force CPU usage (default behavior, following notebook)
+python main.py --mode train
 
-# Memory optimization for M1/M2 8GB
-python main.py --mode train --batch-size 4 --num-workers 0
+# Memory optimization
+python main.py --mode train --batch-size 32
 ```
 
 ## 📁 Expected Outputs
@@ -351,12 +353,11 @@ python main.py --mode train --batch-size 4 --num-workers 0
 ```
 results/
 ├── models/
-│   ├── best_model.pth          # Best validation model
-│   ├── checkpoint_epoch_*.pth  # Periodic checkpoints
-│   └── final_model.pth         # Final epoch model
+│   └── cnn_casting_inspection_model.h5    # Best Keras model (notebook style)
 └── logs/
-    ├── training_history.json   # Metrics history
-    └── training_curves.png     # Loss/accuracy plots
+    ├── training_history.json              # Metrics history
+    ├── training_curves.png                # Loss/accuracy plots (notebook style)
+    └── test_predictions.png               # Prediction visualizations
 ```
 
 ### Evaluation Outputs
@@ -382,23 +383,27 @@ results/explanations/
 
 #### Installation Problems
 ```bash
-# Python/pip issues
+# Python/uv issues
 which python3
 python3 --version
+uv --version
 
-# Dependencies
+# Dependencies with uv (recommended)
+uv pip install -r requirements.txt
+
+# Alternative with pip
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Virtual environment
+# Recreate virtual environment with uv
 deactivate && rm -rf venv
-python3 -m venv venv && source venv/bin/activate
+uv venv venv && source venv/bin/activate
 ```
 
 #### Memory Issues
 ```bash
-# Reduce memory usage
-python main.py --batch-size 4 --num-workers 0
+# Reduce memory usage (notebook approach)
+python main.py --batch-size 32 --steps-per-epoch 100
 
 # Monitor memory
 activity monitor  # macOS
@@ -408,10 +413,10 @@ htop             # Linux
 #### Model Loading Errors
 ```bash
 # Check model file
-ls -la results/models/best_model.pth
+ls -la results/models/cnn_casting_inspection_model.h5
 
-# Verify model architecture match
-python main.py --mode evaluate --model-type resnet50 --model-path results/models/best_model.pth
+# Verify TensorFlow model loading
+python -c "import tensorflow as tf; model = tf.keras.models.load_model('results/models/cnn_casting_inspection_model.h5'); print('Model loaded successfully')"
 ```
 
 #### Dashboard Issues
@@ -434,18 +439,18 @@ ls -la data/train/*/
 chmod -R 755 data/
 ```
 
-### Performance Optimization
+### Performance Optimization (Notebook Approach)
 
 #### For Training
-- **Batch Size**: Start with 16, reduce if OOM errors
-- **Workers**: Use 2-4 for optimal data loading
-- **Learning Rate**: 0.0001 works well for most cases
-- **Early Stopping**: Prevents overfitting, saves time
+- **Batch Size**: Start with 64 (notebook default), reduce if OOM errors
+- **Steps per Epoch**: 150 (notebook default), adjust based on dataset size
+- **Image Size**: 300x300 grayscale (notebook approach)
+- **Extensive Augmentation**: Improves generalization following notebook
 
 #### For Inference
-- **Model Choice**: EfficientNet for best speed/accuracy trade-off
-- **Batch Processing**: Process multiple images together
-- **Image Preprocessing**: Resize to 224x224 for optimal performance
+- **Model**: Simple CNN optimized for casting defect detection
+- **Batch Processing**: Process multiple 300x300 grayscale images together
+- **Threshold**: Adjust classification threshold (default: 0.5) based on precision/recall needs
 
 ### System Requirements
 
@@ -456,9 +461,9 @@ chmod -R 755 data/
 - **Python**: 3.8+
 
 #### Recommended for Training
-- **CPU**: 4+ cores or Apple Silicon
+- **CPU**: 4+ cores (TensorFlow CPU optimization)
 - **RAM**: 8GB+ (16GB for large datasets)
-- **GPU**: CUDA-compatible or Apple Silicon MPS
+- **GPU**: CUDA-compatible (TensorFlow GPU support)
 - **Storage**: 10GB+ free space
 
 ## 📄 License
