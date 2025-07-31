@@ -6,20 +6,22 @@ Automated defect detection for industrial quality inspection using TensorFlow/Ke
 
 ## Overview
 This repository provides a complete end-to-end pipeline for industrial quality inspection:
-- **🤖 Simple CNN Training**: Sequential CNN with Conv2D layers and extensive augmentation
+- **🤖 Fixed CNN Architecture**: Streamlined Sequential CNN with optimized 32→16 Conv2D filters and extensive augmentation
 - **📊 Comprehensive Evaluation**: Detailed metrics, confusion matrices, ROC curves, threshold-based classification
 - **🔍 Multi-Method Explainability**: LIME, SHAP, and other explainability methods for TensorFlow models
 - **🖥️ Interactive Dashboard**: Streamlit-based UI with real-time analysis and batch processing
-- **🚀 Production-Ready**: TensorFlow/Keras training with ModelCheckpoint and 300x300 grayscale processing
+- **🚀 Production-Ready**: TensorFlow/Keras training focused exclusively on real casting product data
+- **⚡ Simplified CLI**: Streamlined command-line interface with only essential parameters
 
 The project exposes a single CLI entry point in [`main.py`](main.py) with modes: `full`, `train`, `evaluate`, `explain`, and an interactive dashboard in [`dashboard/app.py`](dashboard/app.py).
 
 ## 🌟 Key Features
 
 ### Training & Optimization
-- **Simple CNN Architecture**: Sequential model with 32→16 Conv2D filters, MaxPooling, Dense layers
+- **Fixed CNN Architecture**: Streamlined Sequential model with 32→16 Conv2D filters, MaxPooling, Dense layers
 - **Optimized Training**: 25 epochs, 150 steps/epoch, Adam optimizer, binary crossentropy
 - **Extensive Augmentation**: 360° rotation, shifts, brightness, flips for improved generalization
+- **Real Data Only**: Production-focused system designed exclusively for casting product dataset
 - **Platform Support**: TensorFlow GPU detection with memory growth, CPU fallback
 - **Grayscale Processing**: 300x300 pixel images for optimal performance
 
@@ -141,9 +143,9 @@ data/
 - **Automatic Resizing**: Images automatically resized to 300x300
 
 **Important Notes**:
-- **Real Dataset Required**: This system is designed for the actual casting product dataset
+- **Real Dataset Required**: This system exclusively uses the actual casting product dataset
+- **Production-Focused**: No dummy/synthetic data support - designed for real industrial applications
 - **Direct Download**: Automatic download from public source (no API tokens required)
-- **No Dummy Data**: The system requires real industrial data for meaningful results
 - **Dataset Verification**: Automatic verification ensures correct dataset structure after download
 - For manual setup, place your real dataset under `data/` as shown above
 
@@ -212,7 +214,6 @@ python main.py [--mode MODE] [OPTIONS]
 ```bash
 --data-dir DATA_DIR           # Dataset directory (default: data)
 --download-data               # Download casting dataset before training
---create-dummy                # Create dummy dataset for testing
 --model-path MODEL_PATH       # Path to saved model (for eval/explain)
 --num-classes NUM_CLASSES     # Number of classes (default: 2)
 ```
