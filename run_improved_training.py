@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run improved training with optimized hyperparameters
+Run improved training with all fixes applied
 """
 
 import os
@@ -12,9 +12,9 @@ from pathlib import Path
 # Add src to path
 sys.path.append('src')
 
-# Import enhanced modules
-from src.data.enhanced_dataset import get_enhanced_data_loaders
-from src.training.improved_trainer import ImprovedQualityInspectionTrainer
+# Import standard modules (fixed versions)
+from src.data.dataset import get_data_loaders
+from src.training.train_model import QualityInspectionTrainer
 
 def run_improved_training():
     """Run training with all improvements."""
@@ -22,25 +22,23 @@ def run_improved_training():
     print("🚀 RUNNING IMPROVED QUALITY INSPECTION TRAINING")
     print("=" * 70)
     
-    # Optimized configuration based on analysis
+    # Optimized configuration with all fixes
     config = {
         'data_dir': 'data',
-        'model_type': 'resnet50',  # Better than simple CNN
+        'model_type': 'resnet50',
         'num_classes': 2,
-        'epochs': 25,  # Increased from 3
-        'batch_size': 24,  # Slightly smaller for stability
-        'learning_rate': 0.0008,  # Optimized learning rate
-        'weight_decay': 5e-4,  # Increased regularization
-        'optimizer': 'adamw',  # Better optimizer
-        'scheduler': 'onecycle',  # Advanced scheduler
-        'mixup_alpha': 0.3,  # MixUp augmentation
-        'use_tta': True,  # Test Time Augmentation
-        'patience': 12,  # Early stopping
+        'epochs': 30,  # Reasonable number with early stopping
+        'batch_size': 16,  # Smaller for better generalization
+        'learning_rate': 0.0001,  # Lower learning rate
+        'weight_decay': 0.01,  # Increased regularization
+        'optimizer': 'adam',
+        'scheduler': 'warmup_cosine',  # Better scheduler
+        'early_stopping_patience': 10,  # Early stopping
         'save_dir': 'results/models',
         'log_dir': 'results/logs',
-        'num_workers': 4,
+        'num_workers': 2,  # Reduced for stability
         'pretrained': True,
-        'save_frequency': 5
+        'save_frequency': 10
     }
     
     print("📋 OPTIMIZED CONFIGURATION:")
@@ -49,72 +47,69 @@ def run_improved_training():
         print(f"{key:20}: {value}")
     print("-" * 40)
     
-    # Create enhanced data loaders
-    print("\n📊 Loading Enhanced Dataset...")
+    # Create data loaders with improved augmentation
+    print("\n📊 Loading Dataset with Enhanced Augmentation...")
     try:
-        train_loader, val_loader = get_enhanced_data_loaders(
+        train_loader, val_loader = get_data_loaders(
             data_dir=config['data_dir'],
             batch_size=config['batch_size'],
             num_workers=config['num_workers'],
-            val_split=0.2,
-            use_advanced_aug=True,
-            use_stratified_split=True
+            val_split=0.2
         )
         
-        config['steps_per_epoch'] = len(train_loader)
-        print(f"✅ Training batches: {len(train_loader)}")
-        print(f"✅ Validation batches: {len(val_loader)}")
+        print(f"✅ Training samples: {len(train_loader.dataset)}")
+        print(f"✅ Validation samples: {len(val_loader.dataset)}")
         
     except Exception as e:
         print(f"❌ Error loading data: {e}")
         return None
     
-    # Initialize improved trainer
-    print("\n🧠 Initializing Improved Trainer...")
-    trainer = ImprovedQualityInspectionTrainer(config)
+    # Initialize trainer with all fixes
+    print("\n🧠 Initializing Fixed Trainer...")
+    trainer = QualityInspectionTrainer(config)
     
     # Show improvements summary
-    print("\n🎯 IMPLEMENTED IMPROVEMENTS:")
+    print("\n🎯 IMPLEMENTED FIXES:")
     print("-" * 50)
-    print("✅ Advanced Data Augmentation (Albumentations)")
-    print("✅ Class Balancing with Weighted Loss")
-    print("✅ MixUp Data Augmentation")
-    print("✅ Test Time Augmentation (TTA)")
-    print("✅ AdamW Optimizer with Weight Decay")
-    print("✅ OneCycle Learning Rate Scheduler")
-    print("✅ Improved Model Architecture")
-    print("✅ Label Smoothing")
-    print("✅ Gradient Clipping")
-    print("✅ Early Stopping")
-    print("✅ Stratified Data Splitting")
+    print("✅ Fixed MPS/GPU device selection")
+    print("✅ Updated deprecated 'pretrained' parameter")
+    print("✅ Enhanced data augmentation with more techniques")
+    print("✅ Added early stopping to prevent overfitting")
+    print("✅ Improved learning rate scheduling with warmup")
+    print("✅ Proper regularization (dropout + weight decay)")
+    print("✅ Fixed precision warnings in metrics")
+    print("✅ Non-blocking data transfer for performance")
     print("-" * 50)
     
-    # Start improved training
-    print("\n🚀 Starting Improved Training...")
+    # Start fixed training
+    print("\n🚀 Starting Fixed Training...")
     try:
-        best_model_path = trainer.train_improved(train_loader, val_loader)
+        best_model_path = trainer.train(train_loader, val_loader)
         
         print("\n🎉 IMPROVED TRAINING COMPLETED!")
         print("=" * 60)
         print(f"📁 Best model saved: {best_model_path}")
-        print(f"📈 Best validation F1: {trainer.best_val_f1:.4f}")
-        print(f"📊 Training history saved: {config['log_dir']}/improved_training_history.json")
-        print(f"📈 Training curves saved: {config['log_dir']}/improved_training_curves.png")
+        print(f"📈 Best validation accuracy: {trainer.best_val_acc:.2f}%")
+        print(f"📊 Training history saved: {config['log_dir']}/training_history.json")
+        print(f"📈 Training curves saved: {config['log_dir']}/training_curves.png")
+        
+        if trainer.early_stopping_triggered:
+            print("✅ Early stopping prevented overfitting")
         
         # Performance comparison
         print("\n📊 EXPECTED IMPROVEMENTS:")
         print("-" * 40)
-        print("Previous Performance:")
-        print("  Training Accuracy:   61.69%")
-        print("  Validation Accuracy: 77.01%")
-        print("  F1 Score:           0.77")
-        print("  AUC Score:          0.77")
+        print("Issues Fixed:")
+        print("  ❌ Overfitting (Training 87% vs Val 85% → 46%)")
+        print("  ❌ Hardware warnings (CPU-only training)")
+        print("  ❌ Deprecated parameters")
+        print("  ❌ Erratic validation performance")
         print("")
-        print("Target Improvements:")
-        print("  Training Accuracy:   75-85%")
-        print("  Validation Accuracy: 85-95%") 
-        print("  F1 Score:           0.85-0.95")
-        print("  AUC Score:          0.85-0.95")
+        print("Expected Results:")
+        print("  ✅ Stable validation performance")
+        print("  ✅ Reduced overfitting gap (<10%)")
+        print("  ✅ Faster training with GPU/MPS")
+        print("  ✅ Better convergence")
         print("-" * 40)
         
         return best_model_path
@@ -148,13 +143,16 @@ def test_improved_model(model_path):
             if history['val_acc']:
                 final_val_acc = history['val_acc'][-1]
                 final_train_acc = history['train_acc'][-1]
-                final_val_f1 = history['val_f1'][-1]
                 
                 print(f"\n📊 FINAL PERFORMANCE:")
                 print(f"  Final Training Accuracy:   {final_train_acc:.2f}%")
                 print(f"  Final Validation Accuracy: {final_val_acc:.2f}%")
-                print(f"  Final Validation F1:       {final_val_f1:.4f}")
-                print(f"  Accuracy Gap:              {final_val_acc - final_train_acc:.2f}%")
+                print(f"  Accuracy Gap:              {abs(final_val_acc - final_train_acc):.2f}%")
+                
+                if abs(final_val_acc - final_train_acc) < 10:
+                    print("  ✅ Good generalization (gap < 10%)")
+                else:
+                    print("  ⚠️  Potential overfitting (gap > 10%)")
         
         return True
         

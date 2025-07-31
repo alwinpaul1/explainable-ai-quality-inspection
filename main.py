@@ -250,7 +250,7 @@ def main():
                        choices=['adam', 'sgd'],
                        help='Optimizer')
     parser.add_argument('--scheduler', default='plateau',
-                       choices=['plateau', 'cosine', 'none'],
+                       choices=['plateau', 'cosine', 'warmup_cosine', 'none'],
                        help='Learning rate scheduler')
     
     # Output arguments

@@ -32,7 +32,15 @@ class QualityInspectionTrainer:
     
     def __init__(self, config):
         self.config = config
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        # Device selection with MPS support
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        elif torch.backends.mps.is_available():
+            self.device = torch.device('mps')
+        else:
+            self.device = torch.device('cpu')
+        
         print(f"Using device: {self.device}")
         
         # Create directories
@@ -65,6 +73,11 @@ class QualityInspectionTrainer:
         # Best model tracking
         self.best_val_acc = 0.0
         self.best_model_path = None
+        
+        # Early stopping
+        self.early_stopping_patience = config.get('early_stopping_patience', 15)
+        self.early_stopping_counter = 0
+        self.early_stopping_triggered = False
     
     def _get_optimizer(self):
         """Initialize optimizer."""
@@ -96,11 +109,24 @@ class QualityInspectionTrainer:
         """Initialize learning rate scheduler."""
         if self.config['scheduler'] == 'plateau':
             return ReduceLROnPlateau(
-                self.optimizer, mode='max', patience=10, factor=0.5
+                self.optimizer, mode='max', patience=5, factor=0.3, min_lr=1e-7
             )
         elif self.config['scheduler'] == 'cosine':
             return CosineAnnealingLR(
-                self.optimizer, T_max=self.config['epochs']
+                self.optimizer, T_max=self.config['epochs'], eta_min=1e-6
+            )
+        elif self.config['scheduler'] == 'warmup_cosine':
+            from torch.optim.lr_scheduler import LinearLR, SequentialLR
+            warmup_scheduler = LinearLR(
+                self.optimizer, start_factor=0.1, total_iters=5
+            )
+            cosine_scheduler = CosineAnnealingLR(
+                self.optimizer, T_max=self.config['epochs']-5, eta_min=1e-6
+            )
+            return SequentialLR(
+                self.optimizer, 
+                schedulers=[warmup_scheduler, cosine_scheduler], 
+                milestones=[5]
             )
         else:
             return None
@@ -114,7 +140,7 @@ class QualityInspectionTrainer:
         
         pbar = tqdm(train_loader, desc='Training')
         for batch_idx, (data, target, _) in enumerate(pbar):
-            data, target = data.to(self.device), target.to(self.device)
+            data, target = data.to(self.device, non_blocking=True), target.to(self.device, non_blocking=True)
             
             # Zero gradients
             self.optimizer.zero_grad()
@@ -157,7 +183,7 @@ class QualityInspectionTrainer:
         with torch.no_grad():
             pbar = tqdm(val_loader, desc='Validation')
             for data, target, _ in pbar:
-                data, target = data.to(self.device), target.to(self.device)
+                data, target = data.to(self.device, non_blocking=True), target.to(self.device, non_blocking=True)
                 
                 # Forward pass
                 outputs = self.model(data)
@@ -231,7 +257,7 @@ class QualityInspectionTrainer:
                 else:
                     self.scheduler.step()
             
-            # Save best model
+            # Save best model and early stopping check
             if val_acc > self.best_val_acc:
                 self.best_val_acc = val_acc
                 self.best_model_path = os.path.join(
@@ -239,6 +265,15 @@ class QualityInspectionTrainer:
                 )
                 self.save_model(self.best_model_path, epoch, val_metrics)
                 print(f"New best model saved! Val Acc: {val_acc:.2f}%")
+                self.early_stopping_counter = 0  # Reset counter
+            else:
+                self.early_stopping_counter += 1
+                print(f"Early stopping counter: {self.early_stopping_counter}/{self.early_stopping_patience}")
+                
+                if self.early_stopping_counter >= self.early_stopping_patience:
+                    print(f"Early stopping triggered after {epoch+1} epochs")
+                    self.early_stopping_triggered = True
+                    break
             
             # Save checkpoint
             if (epoch + 1) % self.config.get('save_frequency', 10) == 0:
@@ -248,7 +283,12 @@ class QualityInspectionTrainer:
                 self.save_model(checkpoint_path, epoch, val_metrics)
         
         total_time = time.time() - start_time
-        print(f"\nTraining completed in {total_time//60:.0f}m {total_time%60:.0f}s")
+        
+        if self.early_stopping_triggered:
+            print(f"\nTraining stopped early after {epoch+1} epochs due to no improvement")
+        else:
+            print(f"\nTraining completed in {total_time//60:.0f}m {total_time%60:.0f}s")
+        
         print(f"Best validation accuracy: {self.best_val_acc:.2f}%")
         
         # Save training history
