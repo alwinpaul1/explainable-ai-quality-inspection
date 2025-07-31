@@ -26,7 +26,6 @@ from src.utils.metrics import calculate_metrics, print_metrics_summary
 def setup_directories():
     """Create necessary directories."""
     dirs = [
-        'data/raw', 'data/processed', 'data/splits',
         'results/models', 'results/logs', 'results/experiments',
         'results/explanations', 'results/reports'
     ]
