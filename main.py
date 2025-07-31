@@ -30,94 +30,98 @@ def setup_directories():
         os.makedirs(dir_path, exist_ok=True)
         print(f"Created directory: {dir_path}")
 
-def download_dataset(dataset_name='casting', data_dir='data'):
-    """Download and setup dataset."""
+def download_dataset(data_dir='data'):
+    """Download and setup casting dataset."""
     import urllib.request
     import zipfile
-    import shutil
+    import requests
     from pathlib import Path
     
-    print(f"🔽 Downloading {dataset_name} dataset...")
+    print("🔽 Downloading Casting Product Image Dataset...")
     
     # Create data directory
     data_path = Path(data_dir)
     data_path.mkdir(parents=True, exist_ok=True)
     
     try:
-        if dataset_name == 'casting':
-            print("📦 Downloading Casting Product Image Dataset...")
-            
-            # Try Kaggle API first (most reliable)
+        # Try direct download from alternative sources
+        print("📦 Attempting to download dataset...")
+        
+        # Alternative download URLs (you may need to find a direct link)
+        urls = [
+            # Add direct download URLs here when available
+            # "https://example.com/casting-dataset.zip",
+        ]
+        
+        download_success = False
+        
+        for i, url in enumerate(urls):
             try:
-                import kaggle
-                print("🔑 Kaggle API found, downloading dataset...")
+                print(f"🔄 Trying download source {i+1}/{len(urls)}...")
                 
-                # Download using Kaggle API
-                kaggle.api.dataset_download_files(
-                    'ravirajsinh45/real-life-industrial-dataset-of-casting-product',
-                    path=data_dir,
-                    unzip=True
-                )
+                # Download file
+                response = requests.get(url, stream=True)
+                response.raise_for_status()
+                
+                zip_path = data_path / 'casting_dataset.zip'
+                
+                # Save with progress
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded = 0
+                
+                with open(zip_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if total_size > 0:
+                                percent = (downloaded / total_size) * 100
+                                print(f"\r⬇️  Downloaded: {percent:.1f}%", end='', flush=True)
+                
+                print("\n📦 Extracting dataset...")
+                
+                # Extract zip file
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(data_path)
+                
+                # Clean up zip file
+                zip_path.unlink()
                 
                 # Verify download and structure
                 if verify_casting_dataset_structure(data_dir):
-                    print("✅ Kaggle dataset downloaded and verified successfully!")
-                    return True
+                    print("✅ Dataset downloaded and verified successfully!")
+                    download_success = True
+                    break
                 else:
-                    print("⚠️ Dataset structure verification failed, attempting alternative download...")
+                    print("⚠️ Dataset structure verification failed.")
                     
-            except ImportError:
-                print("💡 Kaggle API not found, attempting direct download...")
             except Exception as e:
-                print(f"❌ Kaggle API error: {e}, attempting alternative download...")
-            
-            # Alternative: Direct download from mirror or GitHub release
-            try:
-                print("🔄 Attempting direct download from alternative source...")
-                
-                # Try to download from a reliable source (you may need to find/host the dataset)
-                # For now, provide clear instructions for manual download
-                print("📋 Please download the dataset manually:")
-                print("   1. Visit: https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product")
-                print("   2. Click 'Download' button (requires Kaggle account)")
-                print("   3. Extract the downloaded zip file")
-                print("   4. Copy the contents to your 'data/' directory")
-                print("   5. Ensure this structure:")
-                print("      data/")
-                print("      ├── train/")
-                print("      │   ├── defective/")
-                print("      │   └── ok/")
-                print("      └── test/")
-                print("          ├── defective/")
-                print("          └── ok/")
-                
-                print("\n💡 Alternative: Install Kaggle API for automatic download:")
-                print("   pip install kaggle")
-                print("   # Get API token from kaggle.com/account")
-                print("   # Place kaggle.json in ~/.kaggle/")
-                
-                return False
-                
-        elif dataset_name == 'mvtec':
-            print("📦 MVTec Anomaly Detection Dataset...")
-            print("   Visit: https://www.mvtec.com/company/research/datasets/mvtec-ad")
-            print("   Manual download required due to license agreement.")
-            return False
-            
-        elif dataset_name == 'neu':
-            print("📦 NEU Surface Defect Dataset...")
-            print("   Visit: http://faculty.neu.edu.cn/yunhyan/NEU_surface_defect_database.html")
-            print("   Manual download required.")
-            return False
-            
-        else:
-            print(f"❌ Dataset '{dataset_name}' not supported.")
-            print("   Supported datasets: casting, mvtec, neu")
+                print(f"❌ Download from source {i+1} failed: {e}")
+                continue
+        
+        if not download_success:
+            # Provide manual download instructions
+            print("📋 Automatic download failed. Please download manually:")
+            print("   1. Visit: https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product")
+            print("   2. Download the dataset (requires free Kaggle account)")
+            print("   3. Extract the downloaded zip file")
+            print("   4. Copy the contents to your 'data/' directory")
+            print("   5. Ensure this structure:")
+            print("      data/")
+            print("      ├── train/")
+            print("      │   ├── defective/")
+            print("      │   └── ok/")
+            print("      └── test/")
+            print("          ├── defective/")
+            print("          └── ok/")
+            print("\n   Then run the command again without --download-data")
             return False
             
     except Exception as e:
         print(f"❌ Error downloading dataset: {e}")
         return False
+    
+    return download_success
 
 def verify_casting_dataset_structure(data_dir):
     """Verify that the casting dataset has the correct structure."""
@@ -369,11 +373,9 @@ def run_complete_pipeline(config):
     
     if config.get('download_data', False):
         print("🔽 Downloading real dataset...")
-        dataset_ready = download_dataset(config.get('dataset_name', 'casting'), config['data_dir'])
+        dataset_ready = download_dataset(config['data_dir'])
         if not dataset_ready:
-            print("❌ Dataset download failed. Please download manually or install Kaggle API.")
-            print("   Run: pip install kaggle")
-            print("   Configure: Place kaggle.json API key in ~/.kaggle/")
+            print("❌ Dataset download failed. Please download manually.")
             return
     else:
         # Check if dataset already exists
@@ -442,12 +444,9 @@ def main():
     parser.add_argument('--data-dir', default='data',
                        help='Path to dataset directory')
     parser.add_argument('--download-data', action='store_true',
-                       help='Download dataset before training')
+                       help='Download casting dataset before training')
     parser.add_argument('--create-dummy', action='store_true',
                        help='Create dummy dataset for testing')
-    parser.add_argument('--dataset-name', default='casting',
-                       choices=['casting', 'mvtec', 'neu'],
-                       help='Dataset to download')
     
     # Model arguments
     parser.add_argument('--model-type', default='resnet50',
@@ -500,7 +499,6 @@ def main():
         'data_dir': args.data_dir,
         'download_data': args.download_data,
         'create_dummy': args.create_dummy,
-        'dataset_name': args.dataset_name,
         'model_type': args.model_type,
         'model_path': args.model_path,
         'num_classes': args.num_classes,
