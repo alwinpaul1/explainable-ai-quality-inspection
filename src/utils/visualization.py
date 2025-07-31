@@ -6,13 +6,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import torch
-from PIL import Image
 import cv2
 
 # Set style
 try:
     plt.style.use('seaborn-v0_8')
-except:
+except OSError:
     plt.style.use('seaborn')
 sns.set_palette("husl")
 

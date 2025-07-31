@@ -1,271 +1,163 @@
-# 🔍 Explainable AI Quality Inspection
+# Explainable AI Quality Inspection
 
-A comprehensive deep learning system for manufacturing quality inspection with explainable AI capabilities. This project combines state-of-the-art computer vision models with interpretability techniques to detect defects in industrial products while providing clear explanations for the predictions.
+Automated defect detection for metal castings with PyTorch training, evaluation, explainability, and a Streamlit dashboard.
 
-![Project Banner](https://img.shields.io/badge/AI-Quality%20Inspection-blue) ![Python](https://img.shields.io/badge/python-3.8+-blue.svg) ![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg)
+[![Python 3.8+](requirements.txt)](requirements.txt) • [![PyTorch MPS on macOS](requirements.txt)](requirements.txt)
 
-## 🌟 Features
+## Overview
+This repository provides an end-to-end pipeline to:
+- Train a CNN classifier to detect casting defects.
+- Evaluate model performance with standard metrics.
+- Generate explainability overlays for model decisions.
+- Explore predictions interactively via a Streamlit dashboard.
 
-- **🤖 Multiple Model Architectures**: ResNet50, EfficientNet, VGG16, and custom CNN
-- **🔍 Explainable AI**: LIME, SHAP, Integrated Gradients, and GradCAM
-- **📊 Comprehensive Evaluation**: Detailed metrics and visualization
-- **🎯 Interactive Dashboard**: Streamlit-based web interface
-- **📈 Real-time Inference**: Fast prediction with explanation generation
-- **🏭 Industrial Datasets**: Support for casting, MVTec, and NEU datasets
-- **📋 Automated Pipeline**: End-to-end training and evaluation workflow
-- **⚡ Optimized Training**: Fixed overfitting, hardware acceleration, and early stopping
-- **🔧 Advanced Augmentation**: Enhanced data augmentation for better generalization
+The project exposes a single CLI entry point in [main.py](main.py) with modes: `full`, `train`, `evaluate`, `explain`, and a dashboard in [dashboard/app.py](dashboard/app.py).
 
-## 🏗️ Project Structure
+## Features
+- Training: Configurable epochs, augmentation, checkpointing.
+- Evaluation: Accuracy, precision, recall, F1, confusion matrix/ROC (depending on configuration).
+- Explainability: Visual explanations (e.g., SHAP or similar) for images.
+- Dashboard: Upload images, see predictions and explanations.
+- CLI: One script orchestrates all workflows.
 
+## Architecture Layout
 ```
-explainable-ai-quality-inspection/
-├── 📁 dashboard/              # Streamlit dashboard
-│   ├── app.py                # Main dashboard application
-│   ├── assets/               # Dashboard assets
-│   └── components/           # Dashboard components
-├── 📁 data/                   # Dataset storage
-│   ├── test/                 # Test dataset
-│   └── train/                # Training dataset
-├── 📁 results/                # Training results and outputs
-│   ├── experiments/          # Experiment logs
-│   ├── explanations/         # Generated explanations
-│   ├── logs/                 # Training logs and curves
-│   ├── models/               # Trained model files
-│   └── reports/              # Evaluation reports
-├── 📁 scripts/                # Utility scripts
-│   └── download_dataset.py   # Dataset download script
-├── 📁 src/                    # Source code
-│   ├── data/                 # Data handling modules
-│   │   └── dataset.py        # Dataset classes with enhanced augmentation
-│   ├── models/               # Model architectures
-│   │   └── cnn_model.py      # CNN model definitions (fixed deprecated params)
-│   ├── training/             # Training modules
-│   │   └── train_model.py    # Fixed training script with early stopping
-│   ├── evaluation/           # Evaluation modules
-│   │   └── evaluate_model.py # Model evaluation
-│   ├── explainability/       # Explainability modules
-│   │   └── explain_model.py  # Explanation generation
-│   └── utils/                # Utility modules
-│       ├── metrics.py        # Metric calculations (fixed warnings)
-│       └── visualization.py  # Visualization utilities
-├── 📁 tests/                  # Unit tests
-├── main.py                   # Main execution script with optimized training
-├── requirements.txt          # Python dependencies
-└── README.md                # This file
+.
+├── main.py                      # CLI entry point: full/train/evaluate/explain
+├── requirements.txt             # Python dependencies
+├── dashboard/
+│   └── app.py                   # Streamlit UI
+├── src/
+│   ├── training/
+│   │   └── train_model.py
+│   ├── evaluation/
+│   │   └── evaluate_model.py
+│   ├── explainability/
+│   │   └── explain_model.py
+│   └── data/
+│       └── dataset.py
+├── data/                        # Dataset root (user-provided or dummy auto-created)
+│   ├── train/
+│   │   ├── defective/
+│   │   └── ok/
+│   └── val/
+│       ├── defective/
+│       └── ok/
+└── results/                     # Outputs (models, explanations, reports, experiments)
 ```
 
-## 🚀 Quick Start
+## Environment Setup (macOS, venv)
+1) Create and activate a virtual environment:
+```
+python3 -m venv venv
+source venv/bin/activate
+```
 
-### 1. Environment Setup
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd explainable-ai-quality-inspection
-
-# Create and activate virtual environment
-python -m venv quality_env
-source quality_env/bin/activate  # On Windows: quality_env\Scripts\activate
-
-# Install dependencies
+2) Install dependencies:
+```
 pip install -r requirements.txt
 ```
 
-### 2. Dataset Setup
-
-#### Option A: Download Casting Dataset (Recommended)
-```bash
-# Setup Kaggle API credentials first
-pip install kaggle
-kaggle datasets download -d ravirajsinh45/real-life-industrial-dataset-of-casting-product
-
-# Or use the provided script
-python scripts/download_dataset.py --dataset casting --data-dir data
+3) Optional: Verify PyTorch MPS (Apple Silicon) is usable:
+```
+python -c "import torch; print('PyTorch:', torch.__version__); print('MPS:', torch.backends.mps.is_available())"
 ```
 
-#### Option B: Use Other Datasets
-```bash
-# Download MVTec Anomaly Detection dataset
-python scripts/download_dataset.py --dataset mvtec --data-dir data
+## Installation
+- Ensure you are at the repository root.
+- Use the commands above to create a venv and install from [requirements.txt](requirements.txt).
 
-# Download NEU Surface Defect dataset
-python scripts/download_dataset.py --dataset neu --data-dir data
+## Dataset Structure
+You can use your own dataset or rely on small dummy data auto-created when no dataset is found.
+
+Expected structure for user-provided data:
+```
+data/
+├── train/
+│   ├── defective/*.jpg|*.jpeg|*.png
+│   └── ok/*.jpg|*.jpeg|*.png
+└── val/
+    ├── defective/*.jpg|*.jpeg|*.png
+    └── ok/*.jpg|*.jpeg|*.png
 ```
 
-### 3. Training
+Note on missing download script: A dedicated downloader script such as `scripts/download_dataset.py` is not present. For now, manually place your dataset under `data/` as shown above. If `--download-data` is used and no dataset is present, the pipeline may fall back to a small dummy dataset to let you run end-to-end.
 
-#### 🔥 Optimized Training (Default)
-```bash
-# Train with optimized defaults (includes all fixes)
-python main.py --mode train
-
-# This includes:
-# ✅ Fixed overfitting issues
-# ✅ Proper GPU/MPS acceleration  
-# ✅ Enhanced data augmentation
-# ✅ Early stopping
-# ✅ Better learning rate scheduling
-
-# Train with specific architecture
-python main.py --mode train --model-type efficientnet --epochs 50
+## Quick Start
+Run the full pipeline (train → evaluate → explain) and then launch the dashboard:
 ```
+# activate venv first
+source venv/bin/activate
 
-#### Advanced Training Options
-```bash
-# Full training with optimized parameters
-python main.py --mode train \
-    --model-type resnet50 \
-    --epochs 30 \
-    --batch-size 16 \
-    --learning-rate 0.0001 \
-    --weight-decay 0.01 \
-    --optimizer adam \
-    --scheduler warmup_cosine
-```
-
-### 4. Evaluation
-
-```bash
-# Evaluate trained model
-python main.py --mode evaluate --model-path results/models/best_model.pth
-
-# Evaluate with custom test data
-python src/evaluation/evaluate_model.py \
-    --model-path results/models/best_model.pth \
-    --data-dir data \
-    --save-dir results/reports
-```
-
-### 5. Generate Explanations
-
-```bash
-# Generate explanations for test samples
-python main.py --mode explain --model-path results/models/best_model.pth
-
-# Explain specific image
-python src/explainability/explain_model.py \
-    --model-path results/models/best_model.pth \
-    --image-path path/to/image.jpg \
-    --methods lime integrated_gradients gradcam \
-    --save-path results/explanations/explanation.png
-```
-
-### 6. Run Complete Pipeline
-
-```bash
-# Run everything: download data, train, evaluate, and explain
-python main.py --mode full --download-data --epochs 20
-```
-
-## 🎛️ Interactive Dashboard
-
-Launch the interactive Streamlit dashboard for real-time analysis:
-
-```bash
-# Start the dashboard
+python main.py --mode full --download-data --epochs 30
 streamlit run dashboard/app.py
-
-# Access at http://localhost:8501
 ```
 
-### Dashboard Features:
-- **🏠 Overview**: Project information and quick start guide
-- **🔍 Single Image Analysis**: Upload and analyze individual images
-- **📊 Model Performance**: View detailed performance metrics
-- **📈 Batch Analysis**: Analyze multiple images at once
+## CLI Commands
+All commands are run from the repository root:
 
-## 🔧 Configuration Options
-
-### Model Architectures
-- **ResNet50**: `--model-type resnet50` (Default, balanced performance)
-- **EfficientNet-B0**: `--model-type efficientnet` (Efficient, good accuracy)
-- **VGG16**: `--model-type vgg16` (Classical, interpretable)
-- **Simple CNN**: `--model-type simple` (Fast, lightweight)
-
-### Explainability Methods
-- **LIME**: Local Interpretable Model-agnostic Explanations
-- **Integrated Gradients**: Attribution method using gradients
-- **GradCAM**: Gradient-weighted Class Activation Mapping
-- **Occlusion**: Feature importance via occlusion sensitivity
-
-### Training Parameters
-```bash
-# Optimized parameters (recommended)
---epochs 30                    # Number of training epochs
---batch-size 16               # Smaller batch size for better generalization
---learning-rate 0.0001        # Lower learning rate for stability
---weight-decay 0.01           # Increased L2 regularization
---optimizer adam              # Optimizer (adam/sgd)
---scheduler warmup_cosine     # Better LR scheduler (warmup_cosine/plateau/cosine)
-
-# Data parameters
---data-dir data               # Dataset directory
---num-workers 2               # Reduced workers for stability
-
-# Output parameters
---save-dir results/models     # Model save directory
---log-dir results/logs        # Training logs directory
+- Full workflow:
+```
+python main.py --mode full --download-data --epochs 30
 ```
 
-## 🔧 Training Improvements & Fixes
+- Training only:
+```
+python main.py --mode train --epochs 30
+```
 
-This project includes comprehensive fixes for common training issues:
+- Evaluation only:
+```
+python main.py --mode evaluate --model-path results/models/best_model.pth
+```
 
-### ✅ **Fixed Issues**
-- **Overfitting Prevention**: Early stopping and enhanced regularization
-- **Hardware Acceleration**: Proper MPS/CUDA device selection for faster training
-- **Deprecated Parameters**: Updated PyTorch model loading to use `weights` instead of `pretrained`
-- **Data Augmentation**: Enhanced augmentation with 10+ techniques for better generalization
-- **Learning Rate**: Improved scheduling with warmup and cosine annealing
-- **Precision Warnings**: Fixed sklearn metric calculation warnings
+- Explainability only:
+```
+python main.py --mode explain --model-path results/models/best_model.pth
+```
 
-### 📊 **Performance Improvements**
-- **Stable Training**: No more erratic validation performance
-- **Faster Execution**: GPU/MPS acceleration instead of CPU-only
-- **Better Convergence**: Improved learning rate scheduling
-- **Reduced Overfitting**: Training-validation gap reduced from 40%+ to <10%
+- Launch dashboard:
+```
+streamlit run dashboard/app.py
+```
 
-For detailed information about the fixes, see: **[TRAINING_FIXES_SUMMARY.md](TRAINING_FIXES_SUMMARY.md)**
+## macOS Notes (MPS)
+- On Apple Silicon, PyTorch can accelerate via MPS. This is typically auto-detected in the code.
+- If you see an error like “MPS backend not available”, enable CPU fallback:
+```
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+```
+- Performance may vary based on PyTorch version and macOS updates. Ensure versions match those in [requirements.txt](requirements.txt).
 
-## 📊 Supported Datasets
+## Expected Outputs
+After running training/evaluation/explainability:
+- `results/models/best_model.pth` — Best checkpoint by validation metric.
+- `results/reports/evaluation_report.json` — Aggregate metrics and plot artifacts (if produced).
+- `results/explanations/` — Visual explanations/overlays.
+- `results/experiments/` — Logs/experiments metadata (e.g., TensorBoard if enabled).
 
-### 1. Casting Product Dataset
-- **Source**: Kaggle - Real-life Industrial Dataset of Casting Product
-- **Classes**: OK, Defective
-- **Size**: ~7,000 images
-- **Format**: JPG images organized by class
+## Troubleshooting
+- Module not found (torch/streamlit):
+  ```
+  source venv/bin/activate
+  pip install -r requirements.txt
+  ```
+- MPS not available:
+  ```
+  export PYTORCH_ENABLE_MPS_FALLBACK=1
+  ```
+- Out-of-memory during training:
+  Reduce batch size or image size; adjust loaders in [src/training/train_model.py](src/training/train_model.py).
+- Dashboard port conflicts:
+  ```
+  streamlit run dashboard/app.py --server.port 8502
+  ```
+- Dataset warnings/empty splits:
+  Verify your files are in `data/train/{defective,ok}` and `data/val/{defective,ok}` with supported image extensions.
 
-### 2. MVTec Anomaly Detection Dataset
-- **Source**: MVTec Software GmbH
-- **Classes**: 15 different object/texture categories
-- **Size**: ~5,000 images
-- **Format**: Various industrial objects and textures
+## License
+Placeholder: Add a LICENSE file (e.g., MIT, Apache-2.0) and reference it here.
 
-### 3. NEU Surface Defect Dataset
-- **Source**: Northeastern University
-- **Classes**: 6 types of steel surface defects
-- **Size**: ~1,800 images
-- **Format**: Grayscale images of steel surfaces
-
-## 🎯 Model Performance
-
-### Benchmark Results (Casting Dataset)
-
-| Model | Accuracy | Precision | Recall | F1-Score | Inference Time |
-|-------|----------|-----------|---------|----------|----------------|
-| ResNet50 | 94.2% | 93.8% | 94.5% | 94.1% | 12ms |
-| EfficientNet-B0 | 93.8% | 93.2% | 94.1% | 93.6% | 8ms |
-| VGG16 | 92.1% | 91.7% | 92.4% | 92.0% | 18ms |
-| Simple CNN | 89.3% | 88.9% | 89.7% | 89.3% | 5ms |
-
-## 🔍 Explainability Examples
-
-### LIME Explanation
-Shows which image regions most influence the model's decision, highlighting defective areas in manufacturing parts.
-
-### GradCAM Visualization
-Generates heat maps showing where the model focuses its attention when making predictions.
-
-### Integrated Gradients
-Provides pixel-level attribution scores showing the contribution of each pixel to the final prediction.
+Tip: For command-line help:
+```
+python main.py --help
