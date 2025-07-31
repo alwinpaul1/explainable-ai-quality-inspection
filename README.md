@@ -121,7 +121,10 @@ data/
 │       ├── image1.jpg
 │       ├── image2.png
 │       └── ...
-└── val/                    # Validation split (optional)
+├── val/                    # Validation split (optional)
+│   ├── defective/
+│   └── ok/
+└── test/                   # Test split (optional)
     ├── defective/
     └── ok/
 ```
@@ -132,7 +135,10 @@ data/
 - **Recommended Size**: 224x224 pixels or larger
 - **Color Channels**: RGB (3-channel)
 
-**Note**: The system automatically creates dummy datasets for testing when real data isn't available. For production use, manually place your dataset under `data/` as shown above.
+**Important Notes**:
+- The system references a `scripts/download_dataset.py` file for automatic dataset downloading, but this file is not present in the repository
+- When `--download-data` is used without the download script, the system will fall back to creating dummy datasets for testing
+- For production use, manually place your dataset under `data/` as shown above
 
 ## 🚀 Quick Start
 
@@ -183,7 +189,9 @@ python main.py [--mode MODE] [OPTIONS]
 #### Data & Model Options
 ```bash
 --data-dir DATA_DIR           # Dataset directory (default: data)
---model-type {resnet50,efficientnet,vgg16,simple}  # Architecture
+--download-data               # Download dataset before training
+--dataset-name {casting,mvtec,neu}  # Dataset to download (default: casting)
+--model-type {resnet50,efficientnet,vgg16,simple}  # Architecture (default: resnet50)
 --model-path MODEL_PATH       # Path to saved model (for eval/explain)
 --num-classes NUM_CLASSES     # Number of classes (default: 2)
 ```
@@ -191,20 +199,21 @@ python main.py [--mode MODE] [OPTIONS]
 #### Training Parameters
 ```bash
 --epochs EPOCHS              # Training epochs (default: 30)
---batch-size BATCH_SIZE       # Batch size (default: 16, optimized)
+--batch-size BATCH_SIZE       # Batch size (default: 16)
 --learning-rate LR            # Learning rate (default: 0.0001)
 --weight-decay WD            # Weight decay (default: 0.01)
---optimizer {adam,sgd}        # Optimizer choice
---scheduler {plateau,cosine,warmup_cosine,none}  # LR scheduler
+--optimizer {adam,sgd}        # Optimizer choice (default: adam)
+--scheduler {plateau,cosine,warmup_cosine,none}  # LR scheduler (default: warmup_cosine)
 --early-stopping-patience P   # Early stopping patience (default: 10)
 ```
 
-#### System Options
+#### Output & System Options
 ```bash
+--save-dir SAVE_DIR          # Model save directory (default: results/models)
+--log-dir LOG_DIR            # Log directory (default: results/logs)
+--num-explanation-samples N   # Number of samples to explain (default: 5)
 --num-workers NUM_WORKERS     # Data loading workers (default: 2)
---gpu                        # Force GPU usage
---save-dir SAVE_DIR          # Model save directory
---log-dir LOG_DIR            # Logging directory
+--gpu                        # Use GPU if available
 ```
 
 ### Example Commands
@@ -312,8 +321,8 @@ python main.py --mode train --epochs 1 --batch-size 4
 # Enable CPU fallback for MPS issues
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 
-# Force CPU usage
-python main.py --mode train --device cpu
+# Force CPU usage (note: no --device flag, use environment variable)
+PYTORCH_ENABLE_MPS_FALLBACK=1 python main.py --mode train
 
 # Memory optimization for M1/M2 8GB
 python main.py --mode train --batch-size 4 --num-workers 0
