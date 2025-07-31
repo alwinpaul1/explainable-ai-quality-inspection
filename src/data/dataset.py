@@ -4,7 +4,6 @@ Dataset utilities for quality inspection
 
 import os
 import torch
-import pandas as pd
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -143,7 +142,7 @@ def get_data_loaders(data_dir, batch_size=32, num_workers=4, val_split=0.2):
             val_dataset = QualityInspectionDataset(
                 data_dir, split='test', transform=val_transform
             )
-        except:
+        except (FileNotFoundError, OSError) as _:
             # Split train dataset for validation
             total_size = len(train_dataset)
             val_size = int(total_size * val_split)

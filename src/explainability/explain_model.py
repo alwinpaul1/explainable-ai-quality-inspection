@@ -7,18 +7,13 @@ import sys
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 import cv2
 from PIL import Image
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Explainability libraries
-import lime
 from lime import lime_image
-import shap
 from captum.attr import IntegratedGradients, LayerGradCam, Occlusion
-from captum.attr import visualization as viz
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -41,7 +36,7 @@ class ModelExplainer:
         
         # Load model
         self.model = create_model(model_type, num_classes, pretrained=False)
-        checkpoint = torch.load(model_path, map_location=self.device)
+        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model = self.model.to(self.device)
         self.model.eval()
@@ -368,7 +363,7 @@ def main():
     )
     
     # Generate explanations
-    explanations = explainer.explain_image(
+    explainer.explain_image(
         args.image_path,
         methods=args.methods,
         save_path=args.save_path

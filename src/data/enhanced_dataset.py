@@ -4,21 +4,22 @@ Enhanced dataset with advanced augmentation techniques
 
 import os
 import torch
-import pandas as pd
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import numpy as np
-import cv2
-from sklearn.model_selection import StratifiedKFold
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from .advanced_augmentation import (
+    CastingDefectAugmentation,
+    ProgressiveAugmentationScheduler
+)
 
 class EnhancedQualityInspectionDataset(Dataset):
     """Enhanced dataset with advanced augmentation techniques."""
     
-    def __init__(self, data_dir, split='train', transform=None, target_size=(224, 224), 
-                 use_advanced_aug=True):
+    def __init__(self, data_dir, split='train', transform=None, target_size=(224, 224),
+                 use_advanced_aug=True, augmentation_strength='strong', epoch=0, total_epochs=100):
         """
         Args:
             data_dir: Path to dataset directory
@@ -26,11 +27,17 @@ class EnhancedQualityInspectionDataset(Dataset):
             transform: Optional transforms to apply
             target_size: Target image size (height, width)
             use_advanced_aug: Use advanced augmentation techniques
+            augmentation_strength: 'light', 'medium', 'strong', 'progressive'
+            epoch: Current epoch (for progressive augmentation)
+            total_epochs: Total training epochs (for progressive augmentation)
         """
         self.data_dir = data_dir
         self.split = split
         self.target_size = target_size
         self.use_advanced_aug = use_advanced_aug
+        self.augmentation_strength = augmentation_strength
+        self.epoch = epoch
+        self.total_epochs = total_epochs
         
         # Load dataset
         self.samples = self._load_samples()
@@ -39,15 +46,9 @@ class EnhancedQualityInspectionDataset(Dataset):
         
         # Setup transforms
         if transform is None:
-            self.transform = self._get_default_transforms()
+            self.transform = self._get_enhanced_transforms()
         else:
             self.transform = transform
-            
-        # Setup advanced augmentation
-        if use_advanced_aug and split == 'train':
-            self.advanced_transform = self._get_advanced_transforms()
-        else:
-            self.advanced_transform = None
         
     def _load_samples(self):
         """Load image paths and labels with better error handling."""
@@ -110,54 +111,40 @@ class EnhancedQualityInspectionDataset(Dataset):
                                    std=[0.229, 0.224, 0.225])
             ])
     
-    def _get_advanced_transforms(self):
-        """Get advanced albumentations transforms for training."""
-        return A.Compose([
-            A.Resize(256, 256),
-            A.RandomCrop(height=self.target_size[0], width=self.target_size[1]),
+    def _get_enhanced_transforms(self):
+        """Get enhanced transforms using the new augmentation system."""
+        if self.use_advanced_aug and self.split == 'train':
+            # Use advanced casting-specific augmentation
+            augmenter = CastingDefectAugmentation(
+                image_size=self.target_size,
+                augmentation_strength=self.augmentation_strength,
+                preserve_defects=True
+            )
             
-            # Geometric augmentations
-            A.HorizontalFlip(p=0.5),
-            A.VerticalFlip(p=0.3),
-            A.RandomRotate90(p=0.3),
-            A.Rotate(limit=20, p=0.5),
-            A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.2, rotate_limit=15, p=0.5),
+            # For progressive augmentation, adjust strength based on epoch
+            if self.augmentation_strength == 'progressive':
+                scheduler = ProgressiveAugmentationScheduler(self.total_epochs)
+                current_strength = scheduler.get_strength_for_epoch(self.epoch)
+                augmenter.augmentation_strength = current_strength
+                print(f"Epoch {self.epoch}: Using '{current_strength}' augmentation strength")
             
-            # Appearance augmentations
-            A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.6),
-            A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20, p=0.5),
-            A.CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), p=0.3),
-            A.RandomGamma(gamma_limit=(80, 120), p=0.3),
-            
-            # Noise and blur
-            A.OneOf([
-                A.GaussNoise(var_limit=(10.0, 50.0)),
-                A.ISONoise(color_shift=(0.01, 0.05), intensity=(0.1, 0.5)),
-                A.MultiplicativeNoise(multiplier=[0.9, 1.1]),
-            ], p=0.4),
-            
-            A.OneOf([
-                A.MotionBlur(blur_limit=3),
-                A.MedianBlur(blur_limit=3),
-                A.GaussianBlur(blur_limit=3),
-            ], p=0.3),
-            
-            # Distortions specific to manufacturing defects
-            A.OneOf([
-                A.ElasticTransform(alpha=1, sigma=50, alpha_affine=50),
-                A.GridDistortion(num_steps=5, distort_limit=0.3),
-                A.OpticalDistortion(distort_limit=0.1, shift_limit=0.1),
-            ], p=0.3),
-            
-            # Cutout/Coarse dropout for robustness
-            A.CoarseDropout(max_holes=8, max_height=32, max_width=32, 
-                           min_holes=1, min_height=8, min_width=8, 
-                           fill_value=0, p=0.3),
-            
-            # Normalization
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ToTensorV2(),
-        ])
+            return augmenter.get_training_transforms()
+        
+        elif self.split == 'val' or self.split == 'test':
+            # Use validation transforms (no augmentation)
+            augmenter = CastingDefectAugmentation(image_size=self.target_size)
+            return augmenter.get_validation_transforms()
+        
+        else:
+            # Fallback to default transforms
+            return self._get_default_transforms()
+    
+    def update_epoch(self, epoch):
+        """Update epoch for progressive augmentation."""
+        self.epoch = epoch
+        if self.augmentation_strength == 'progressive' and self.split == 'train':
+            # Refresh transforms with new epoch
+            self.transform = self._get_enhanced_transforms()
     
     def __len__(self):
         return len(self.samples)
@@ -176,15 +163,22 @@ class EnhancedQualityInspectionDataset(Dataset):
             # Return a black image if loading fails
             image = Image.new('RGB', self.target_size, color=(0, 0, 0))
         
-        # Apply advanced augmentation if available
-        if self.advanced_transform is not None:
-            # Convert PIL to numpy for albumentations
-            image_np = np.array(image)
-            augmented = self.advanced_transform(image=image_np)
+        # Apply transforms (convert PIL to numpy for albumentations)
+        image_np = np.array(image)
+        
+        try:
+            augmented = self.transform(image=image_np)
             image_tensor = augmented['image']
-        else:
-            # Apply standard transforms
-            image_tensor = self.transform(image)
+        except Exception as e:
+            print(f"Augmentation error for {img_path}: {e}")
+            # Fallback to simple transforms
+            fallback_transform = A.Compose([
+                A.Resize(height=self.target_size[0], width=self.target_size[1]),
+                A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ToTensorV2(),
+            ])
+            augmented = fallback_transform(image=image_np)
+            image_tensor = augmented['image']
         
         # Convert label to index
         label_idx = self.class_to_idx[label]
@@ -194,37 +188,56 @@ class EnhancedQualityInspectionDataset(Dataset):
 class BalancedDataLoader:
     """Create balanced data loaders with proper sampling."""
     
-    def __init__(self, data_dir, batch_size=32, num_workers=4, val_split=0.2, 
-                 use_advanced_aug=True, use_stratified_split=True):
+    def __init__(self, data_dir, batch_size=32, num_workers=4, val_split=0.2,
+                 use_advanced_aug=True, use_stratified_split=True,
+                 augmentation_strength='strong', total_epochs=100):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.val_split = val_split
         self.use_advanced_aug = use_advanced_aug
         self.use_stratified_split = use_stratified_split
+        self.augmentation_strength = augmentation_strength
+        self.total_epochs = total_epochs
         
     def get_balanced_loaders(self):
         """Create balanced train and validation data loaders."""
         
-        # Create datasets
+        # Create datasets with enhanced augmentation
         try:
             train_dataset = EnhancedQualityInspectionDataset(
-                self.data_dir, split='train', use_advanced_aug=self.use_advanced_aug
+                self.data_dir,
+                split='train',
+                use_advanced_aug=self.use_advanced_aug,
+                augmentation_strength=self.augmentation_strength,
+                total_epochs=self.total_epochs
             )
             
-            # Try to load separate test set
+            # Try to load separate validation set
             try:
                 val_dataset = EnhancedQualityInspectionDataset(
-                    self.data_dir, split='test', use_advanced_aug=False
+                    self.data_dir,
+                    split='val',
+                    use_advanced_aug=False,  # No augmentation for validation
+                    augmentation_strength='light'
                 )
-                print("Using separate test set for validation")
-            except:
-                # Create validation split from training data
-                if self.use_stratified_split:
-                    train_dataset, val_dataset = self._create_stratified_split(train_dataset)
-                else:
-                    val_dataset = self._create_random_split(train_dataset)
-                print("Created validation split from training data")
+                print("Using separate validation set")
+            except Exception:
+                try:
+                    val_dataset = EnhancedQualityInspectionDataset(
+                        self.data_dir,
+                        split='test',
+                        use_advanced_aug=False,
+                        augmentation_strength='light'
+                    )
+                    print("Using test set for validation")
+                except Exception:
+                    # Create validation split from training data
+                    if self.use_stratified_split:
+                        train_dataset, val_dataset = self._create_stratified_split(train_dataset)
+                    else:
+                        val_dataset = self._create_random_split(train_dataset)
+                    print("Created validation split from training data")
         
         except Exception as e:
             print(f"Error creating datasets: {e}")
@@ -286,12 +299,19 @@ class BalancedDataLoader:
         
         # Create new dataset instances
         train_dataset = EnhancedQualityInspectionDataset(
-            self.data_dir, split='train', use_advanced_aug=self.use_advanced_aug
+            self.data_dir,
+            split='train',
+            use_advanced_aug=self.use_advanced_aug,
+            augmentation_strength=self.augmentation_strength,
+            total_epochs=self.total_epochs
         )
         train_dataset.samples = train_samples
         
         val_dataset = EnhancedQualityInspectionDataset(
-            self.data_dir, split='val', use_advanced_aug=False
+            self.data_dir,
+            split='val',
+            use_advanced_aug=False,
+            augmentation_strength='light'
         )
         val_dataset.samples = val_samples
         val_dataset.classes = train_dataset.classes
@@ -348,7 +368,7 @@ class BalancedDataLoader:
 class DummyEnhancedDataset(Dataset):
     """Enhanced dummy dataset for testing."""
     
-    def __init__(self, size=100, use_advanced_aug=False, num_classes=2):
+    def __init__(self, size=100, use_advanced_aug=False, num_classes=2, augmentation_strength='medium'):
         self.size = size
         self.num_classes = num_classes
         self.classes = ['ok', 'defective']
@@ -356,18 +376,17 @@ class DummyEnhancedDataset(Dataset):
         self.samples = [(f"dummy_{i}.jpg", self.classes[i % num_classes]) for i in range(size)]
         
         if use_advanced_aug:
+            # Use the new advanced augmentation system
+            augmenter = CastingDefectAugmentation(
+                augmentation_strength=augmentation_strength,
+                preserve_defects=True
+            )
+            self.transform = augmenter.get_training_transforms()
+        else:
             self.transform = A.Compose([
                 A.Resize(224, 224),
-                A.HorizontalFlip(p=0.5),
-                A.RandomBrightnessContrast(p=0.5),
                 A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                 ToTensorV2(),
-            ])
-        else:
-            self.transform = transforms.Compose([
-                transforms.Resize((224, 224)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
         
     def __len__(self):
@@ -391,16 +410,39 @@ class DummyEnhancedDataset(Dataset):
         return image, label, path
 
 # Convenience function for external use
-def get_enhanced_data_loaders(data_dir, batch_size=32, num_workers=4, val_split=0.2, 
-                             use_advanced_aug=True, use_stratified_split=True):
-    """Get enhanced data loaders with all improvements."""
+def get_enhanced_data_loaders(data_dir, batch_size=32, num_workers=4, val_split=0.2,
+                             use_advanced_aug=True, use_stratified_split=True,
+                             augmentation_strength='strong', total_epochs=100):
+    """
+    Get enhanced data loaders with advanced augmentation strategies.
+    
+    Args:
+        data_dir: Path to dataset directory
+        batch_size: Batch size for training
+        num_workers: Number of data loader workers
+        val_split: Validation split ratio
+        use_advanced_aug: Whether to use advanced augmentation
+        use_stratified_split: Whether to use stratified splitting
+        augmentation_strength: 'light', 'medium', 'strong', or 'progressive'
+        total_epochs: Total number of training epochs (for progressive augmentation)
+    
+    Returns:
+        Tuple of (train_loader, val_loader)
+    """
     loader_creator = BalancedDataLoader(
         data_dir=data_dir,
         batch_size=batch_size,
         num_workers=num_workers,
         val_split=val_split,
         use_advanced_aug=use_advanced_aug,
-        use_stratified_split=use_stratified_split
+        use_stratified_split=use_stratified_split,
+        augmentation_strength=augmentation_strength,
+        total_epochs=total_epochs
     )
     
     return loader_creator.get_balanced_loaders()
+
+def get_tta_transforms(image_size=(224, 224)):
+    """Get Test Time Augmentation transforms for improved validation."""
+    augmenter = CastingDefectAugmentation(image_size=image_size)
+    return augmenter.get_tta_transforms()

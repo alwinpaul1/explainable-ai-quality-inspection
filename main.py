@@ -6,22 +6,18 @@ Main execution script for Explainable AI Quality Inspection
 import os
 import sys
 import argparse
-import json
-from pathlib import Path
 
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.data.dataset import get_data_loaders, QualityInspectionDataset
-from src.models.cnn_model import create_model
 from src.training.train_model import QualityInspectionTrainer
 from src.explainability.explain_model import ModelExplainer
 from src.evaluation.evaluate_model import ModelEvaluator
-from src.utils.metrics import calculate_metrics, print_metrics_summary
+from src.utils.metrics import print_metrics_summary
 
 def setup_directories():
     """Create necessary directories."""
@@ -137,7 +133,7 @@ def evaluate_model(model_path, data_dir, config):
             data_dir, split='test'
         )
         test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-    except:
+    except (FileNotFoundError, OSError):
         # Use validation data if test not available
         _, test_loader = get_data_loaders(data_dir, batch_size=32)
     
@@ -174,7 +170,7 @@ def explain_predictions(model_path, data_dir, config, num_samples=5):
             save_path = f"results/explanations/explanation_sample_{i+1}.png"
             
             try:
-                explanations = explainer.explain_image(
+                explainer.explain_image(
                     sample_path,
                     methods=['lime', 'integrated_gradients', 'gradcam'],
                     save_path=save_path
@@ -212,7 +208,7 @@ def run_complete_pipeline(config):
     
     # Evaluate model
     if config.get('evaluate', True):
-        evaluation_results = evaluate_model(
+        evaluate_model(
             config['model_path'], 
             config['data_dir'], 
             config
@@ -231,8 +227,8 @@ def run_complete_pipeline(config):
     print("PIPELINE COMPLETED SUCCESSFULLY!")
     print("="*70)
     print(f"Model saved at: {config['model_path']}")
-    print(f"Results available in: results/")
-    print(f"Explanations available in: results/explanations/")
+    print("Results available in: results/")
+    print("Explanations available in: results/explanations/")
 
 def main():
     parser = argparse.ArgumentParser(

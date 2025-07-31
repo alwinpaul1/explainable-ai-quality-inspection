@@ -8,7 +8,6 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 # Add src to path
@@ -16,7 +15,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.models.cnn_model import create_model
 from src.utils.metrics import calculate_metrics, plot_confusion_matrix, plot_roc_curve
-from src.utils.visualization import plot_sample_predictions
 
 class ModelEvaluator:
     """Comprehensive model evaluation."""
@@ -35,7 +33,7 @@ class ModelEvaluator:
         
         # Load model
         self.model = create_model(model_type, num_classes, pretrained=False)
-        checkpoint = torch.load(model_path, map_location=self.device)
+        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model = self.model.to(self.device)
         self.model.eval()
@@ -103,7 +101,7 @@ class ModelEvaluator:
         avg_loss = running_loss / len(dataloader)
         accuracy = 100. * correct / total
         
-        print(f"\nEvaluation Results:")
+        print("\nEvaluation Results:")
         print(f"Average Loss: {avg_loss:.4f}")
         print(f"Accuracy: {accuracy:.2f}%")
         
@@ -339,9 +337,9 @@ class ModelEvaluator:
         cm = results['metrics']['confusion_matrix']
         
         # Header
-        report.append(f"{'':>12}", end="")
+        report.append(f"{'':>12}")
         for name in self.class_names:
-            report.append(f"{name:>10}", end="")
+            report.append(f"{name:>10}")
         report.append("")
         
         # Matrix
@@ -383,7 +381,6 @@ def main():
     
     # Load test data
     from src.data.dataset import QualityInspectionDataset
-    from torch.utils.data import DataLoader
     
     test_dataset = QualityInspectionDataset(args.data_dir, split='test')
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)

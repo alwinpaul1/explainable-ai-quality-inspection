@@ -5,20 +5,16 @@ Streamlit dashboard for Explainable AI Quality Inspection
 import os
 import sys
 import streamlit as st
-import torch
 import numpy as np
 import pandas as pd
 from PIL import Image
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
-import plotly.graph_objects as go
-from io import BytesIO
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from src.models.cnn_model import create_model
 from src.explainability.explain_model import ModelExplainer
 from src.evaluation.evaluate_model import ModelEvaluator
 
@@ -503,7 +499,7 @@ def show_batch_analysis(model_path, model_type):
                     st.metric("Defective Images", defective_count)
     
     else:
-        dataset_path = st.text_input(
+        st.text_input(
             "Dataset Path",
             value="data/test",
             help="Path to the test dataset folder"

@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
-import numpy as np
 
 class QualityInspectionCNN(nn.Module):
     """CNN model for quality inspection with feature extraction capabilities."""

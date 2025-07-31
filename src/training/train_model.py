@@ -7,17 +7,13 @@ import sys
 import time
 import argparse
 import json
-from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingLR
-import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -25,7 +21,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.data.dataset import get_data_loaders
 from src.models.cnn_model import create_model
 from src.utils.metrics import calculate_metrics
-from src.utils.visualization import plot_training_history
 
 class QualityInspectionTrainer:
     """Trainer class for quality inspection models."""
@@ -420,7 +415,7 @@ def main():
     # Start training
     best_model_path = trainer.train(train_loader, val_loader)
     
-    print(f"\nTraining completed!")
+    print("\nTraining completed!")
     print(f"Best model saved at: {best_model_path}")
     print(f"Best validation accuracy: {trainer.best_val_acc:.2f}%")
 
