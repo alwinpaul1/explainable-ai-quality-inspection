@@ -1,12 +1,12 @@
 # Explainable AI Quality Inspection
 
-Automated defect detection for industrial quality inspection using TensorFlow/Keras following notebook approach, with comprehensive evaluation, advanced explainability methods, and an interactive Streamlit dashboard.
+Automated defect detection for industrial quality inspection using TensorFlow/Keras, with comprehensive evaluation, advanced explainability methods, and an interactive Streamlit dashboard.
 
 ![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg) ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.13+-orange.svg) ![uv](https://img.shields.io/badge/uv-package%20manager-green.svg)
 
 ## Overview
-This repository provides a complete end-to-end pipeline for industrial quality inspection following the notebook approach:
-- **🤖 Simple CNN Training**: Notebook-style Sequential CNN with Conv2D layers and extensive augmentation
+This repository provides a complete end-to-end pipeline for industrial quality inspection:
+- **🤖 Simple CNN Training**: Sequential CNN with Conv2D layers and extensive augmentation
 - **📊 Comprehensive Evaluation**: Detailed metrics, confusion matrices, ROC curves, threshold-based classification
 - **🔍 Multi-Method Explainability**: LIME, SHAP, and other explainability methods for TensorFlow models
 - **🖥️ Interactive Dashboard**: Streamlit-based UI with real-time analysis and batch processing
@@ -16,12 +16,12 @@ The project exposes a single CLI entry point in [`main.py`](main.py) with modes:
 
 ## 🌟 Key Features
 
-### Training & Optimization (Notebook Style)
+### Training & Optimization
 - **Simple CNN Architecture**: Sequential model with 32→16 Conv2D filters, MaxPooling, Dense layers
-- **Notebook Training**: 25 epochs, 150 steps/epoch, Adam optimizer, binary crossentropy
-- **Extensive Augmentation**: 360° rotation, shifts, brightness, flips following notebook parameters
+- **Optimized Training**: 25 epochs, 150 steps/epoch, Adam optimizer, binary crossentropy
+- **Extensive Augmentation**: 360° rotation, shifts, brightness, flips for improved generalization
 - **Platform Support**: TensorFlow GPU detection with memory growth, CPU fallback
-- **Grayscale Processing**: 300x300 pixel images following notebook approach
+- **Grayscale Processing**: 300x300 pixel images for optimal performance
 
 ### Evaluation & Analysis
 - **Comprehensive Metrics**: Accuracy, precision, recall, F1-score, AUC
@@ -50,11 +50,11 @@ The project exposes a single CLI entry point in [`main.py`](main.py) with modes:
 │   └── app.py                   # Streamlit dashboard application
 ├── src/
 │   ├── data/
-│   │   └── dataset.py           # TensorFlow data generators and notebook-style processing
+│   │   └── dataset.py           # TensorFlow data generators and image processing
 │   ├── models/
-│   │   └── cnn_model.py         # Simple CNN creation following notebook architecture
+│   │   └── cnn_model.py         # Simple CNN creation with optimized architecture
 │   ├── training/
-│   │   └── train_model.py       # Keras training with notebook approach
+│   │   └── train_model.py       # Keras training with optimized approach
 │   ├── evaluation/
 │   │   └── evaluate_model.py    # TensorFlow model evaluation with .h5 loading
 │   ├── explainability/
@@ -71,7 +71,7 @@ The project exposes a single CLI entry point in [`main.py`](main.py) with modes:
 │       └── ok/
 └── results/                    # Output directory
     ├── models/                 # Trained Keras models (.h5 files)
-    ├── logs/                   # Training history and curves (notebook style)
+    ├── logs/                   # Training history and curves
     ├── explanations/           # Generated explanations
     ├── reports/               # Evaluation reports and plots
     └── experiments/           # Experiment tracking
@@ -136,8 +136,8 @@ data/
 
 ### Supported Formats
 - **Image Types**: `.jpg`, `.jpeg`, `.png`
-- **Processing Size**: 300x300 pixels (notebook approach)
-- **Color Channels**: Grayscale (1-channel) following notebook
+- **Processing Size**: 300x300 pixels (optimized for performance)
+- **Color Channels**: Grayscale (1-channel) for efficient processing
 - **Automatic Resizing**: Images automatically resized to 300x300
 
 **Important Notes**:
@@ -149,12 +149,12 @@ data/
 
 ## 🚀 Quick Start
 
-### Option 1: Automatic Download & Complete Pipeline (Notebook Style)
+### Option 1: Automatic Download & Complete Pipeline
 ```bash
 # Activate environment
 source venv/bin/activate
 
-# Download real casting dataset and run full pipeline with notebook parameters
+# Download real casting dataset and run full pipeline with optimized parameters
 python main.py --mode full --download-data --epochs 25 --batch-size 64
 
 # Launch interactive dashboard
@@ -176,9 +176,9 @@ python main.py --mode full --epochs 30
 streamlit run dashboard/app.py
 ```
 
-### Option 3: Step-by-Step Training (Notebook Style)
+### Option 3: Step-by-Step Training
 ```bash
-# 1. Train model with notebook settings
+# 1. Train model with optimized settings
 python main.py --mode train --epochs 25 --batch-size 64 --steps-per-epoch 150
 
 # 2. Evaluate trained model
@@ -213,19 +213,19 @@ python main.py [--mode MODE] [OPTIONS]
 --data-dir DATA_DIR           # Dataset directory (default: data)
 --download-data               # Download casting dataset before training
 --create-dummy                # Create dummy dataset for testing
---model-type {simple}  # Architecture (only simple CNN supported, following notebook)
+--model-type {simple}  # Architecture (only simple CNN supported)
 --model-path MODEL_PATH       # Path to saved model (for eval/explain)
 --num-classes NUM_CLASSES     # Number of classes (default: 2)
 ```
 
-#### Training Parameters (Notebook Style)
+#### Training Parameters
 ```bash
---epochs EPOCHS              # Training epochs (default: 25, notebook style)
---batch-size BATCH_SIZE       # Batch size (default: 64, notebook style)
---steps-per-epoch STEPS       # Steps per epoch (default: 150, notebook style)
---validation-steps STEPS      # Validation steps (default: 150, notebook style)
---optimizer {adam}            # Optimizer (adam only, following notebook)
---image-size SIZE             # Image size (default: 300, notebook uses 300x300)
+--epochs EPOCHS              # Training epochs (default: 25)
+--batch-size BATCH_SIZE       # Batch size (default: 64)
+--steps-per-epoch STEPS       # Steps per epoch (default: 150)
+--validation-steps STEPS      # Validation steps (default: 150)
+--optimizer {adam}            # Optimizer (adam only)
+--image-size SIZE             # Image size (default: 300, for 300x300 processing)
 ```
 
 #### Output & System Options
@@ -239,16 +239,16 @@ python main.py [--mode MODE] [OPTIONS]
 
 ### Example Commands
 
-#### Notebook-Style Training
+#### Optimized Training
 ```bash
-# Train with notebook defaults
+# Train with optimized defaults
 python main.py --mode train \
   --epochs 25 \
   --batch-size 64 \
   --steps-per-epoch 150 \
   --validation-steps 150
 
-# Train with custom image size (notebook uses 300x300)
+# Train with custom image size (default: 300x300)
 python main.py --mode train \
   --image-size 300 \
   --epochs 25 \
@@ -324,7 +324,7 @@ streamlit run dashboard/app.py --server.headless true --server.address 0.0.0.0
 TensorFlow automatically detects and uses available compute devices:
 - **NVIDIA GPUs**: CUDA support with automatic memory growth
 - **Apple Silicon**: TensorFlow Metal support (if available)
-- **Fallback**: CPU (following notebook approach)
+- **Fallback**: CPU (default behavior)
 
 ### Verification
 ```bash
@@ -340,7 +340,7 @@ python main.py --mode train --epochs 1 --batch-size 4 --gpu
 # Enable GPU with memory growth
 python main.py --mode train --gpu
 
-# Force CPU usage (default behavior, following notebook)
+# Force CPU usage (default behavior)
 python main.py --mode train
 
 # Memory optimization
@@ -353,10 +353,10 @@ python main.py --mode train --batch-size 32
 ```
 results/
 ├── models/
-│   └── cnn_casting_inspection_model.h5    # Best Keras model (notebook style)
+│   └── cnn_casting_inspection_model.h5    # Best Keras model
 └── logs/
     ├── training_history.json              # Metrics history
-    ├── training_curves.png                # Loss/accuracy plots (notebook style)
+    ├── training_curves.png                # Loss/accuracy plots
     └── test_predictions.png               # Prediction visualizations
 ```
 
@@ -402,7 +402,7 @@ uv venv venv && source venv/bin/activate
 
 #### Memory Issues
 ```bash
-# Reduce memory usage (notebook approach)
+# Reduce memory usage
 python main.py --batch-size 32 --steps-per-epoch 100
 
 # Monitor memory
@@ -439,13 +439,13 @@ ls -la data/train/*/
 chmod -R 755 data/
 ```
 
-### Performance Optimization (Notebook Approach)
+### Performance Optimization
 
 #### For Training
-- **Batch Size**: Start with 64 (notebook default), reduce if OOM errors
-- **Steps per Epoch**: 150 (notebook default), adjust based on dataset size
-- **Image Size**: 300x300 grayscale (notebook approach)
-- **Extensive Augmentation**: Improves generalization following notebook
+- **Batch Size**: Start with 64 (default), reduce if OOM errors
+- **Steps per Epoch**: 150 (default), adjust based on dataset size
+- **Image Size**: 300x300 grayscale (optimized for casting defects)
+- **Extensive Augmentation**: Improves generalization and model robustness
 
 #### For Inference
 - **Model**: Simple CNN optimized for casting defect detection
