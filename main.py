@@ -215,13 +215,29 @@ def explain_predictions(model_path, data_dir, config, num_samples=5):
         num_classes=config['num_classes']
     )
     
-    # Load some test samples
+    # Get data generators to access test samples correctly
     try:
-        test_dataset = QualityInspectionDataset(data_dir, split='test')
+        _, _, test_dataset = get_data_generators(data_dir, batch_size=32)
         
-        # Explain a few samples
-        for i in range(min(num_samples, len(test_dataset))):
-            sample_path = test_dataset.samples[i][0]
+        # Get actual test directory path
+        test_dir = os.path.join(data_dir, 'test')
+        val_dir = os.path.join(data_dir, 'val')
+        
+        # Use val dir if test doesn't exist
+        actual_test_dir = val_dir if not os.path.exists(test_dir) and os.path.exists(val_dir) else test_dir
+        print(f"Using test samples from: {actual_test_dir}")
+        
+        # Get sample file paths directly from filesystem
+        sample_paths = []
+        for class_name in ['ok', 'defective']:
+            class_dir = os.path.join(actual_test_dir, class_name)
+            if os.path.exists(class_dir):
+                for filename in os.listdir(class_dir)[:num_samples//2]:  # Split samples between classes
+                    if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        sample_paths.append(os.path.join(class_dir, filename))
+        
+        # Explain samples
+        for i, sample_path in enumerate(sample_paths[:num_samples]):
             print(f"\nExplaining sample {i+1}: {os.path.basename(sample_path)}")
             
             save_path = f"results/explanations/explanation_sample_{i+1}.png"
@@ -229,7 +245,7 @@ def explain_predictions(model_path, data_dir, config, num_samples=5):
             try:
                 explainer.explain_image(
                     sample_path,
-                    methods=['lime', 'integrated_gradients', 'gradcam'],
+                    methods=['lime', 'shap', 'gradcam'],  # Changed from integrated_gradients to shap
                     save_path=save_path
                 )
                 print(f"Explanation saved to: {save_path}")

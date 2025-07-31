@@ -23,11 +23,16 @@ def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123
     """
     train_path = os.path.join(data_dir, 'train')
     test_path = os.path.join(data_dir, 'test')
-    
-    # Check if val directory exists, otherwise use test
     val_path = os.path.join(data_dir, 'val')
-    if not os.path.exists(val_path):
-        val_path = test_path
+    
+    # Use val as test if test doesn't exist
+    if not os.path.exists(test_path) and os.path.exists(val_path):
+        test_path = val_path
+        print(f"Using {val_path} as test directory since test directory doesn't exist")
+    elif not os.path.exists(test_path):
+        # If neither test nor val exists, use train for evaluation (split internally)
+        test_path = train_path
+        print(f"Warning: Using {train_path} as test directory since neither test nor val directory exists")
     
     # Training data generator with augmentation (following notebook)
     train_generator = ImageDataGenerator(
