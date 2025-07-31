@@ -81,7 +81,6 @@ htmlcov/
 .dmypy.json
 dmypy.json
 
-# Documentation files
-CLAUDE.md
-QUICK_START.md
-PERFORMANCE_IMPROVEMENTS.md
+# Documentation files - ignore all .md files except README.md
+*.md
+!README.md
