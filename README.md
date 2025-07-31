@@ -20,7 +20,6 @@ A comprehensive deep learning system for manufacturing quality inspection with e
 
 ```
 explainable-ai-quality-inspection/
-├── 📁 config/                 # Configuration files
 ├── 📁 dashboard/              # Streamlit dashboard
 │   ├── app.py                # Main dashboard application
 │   ├── assets/               # Dashboard assets
