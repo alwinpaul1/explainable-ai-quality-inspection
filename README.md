@@ -136,36 +136,53 @@ data/
 - **Color Channels**: RGB (3-channel)
 
 **Important Notes**:
-- The system references a `scripts/download_dataset.py` file for automatic dataset downloading, but this file is not present in the repository
-- When `--download-data` is used without the download script, the system will fall back to creating dummy datasets for testing
-- For production use, manually place your dataset under `data/` as shown above
+- **Automatic Dataset Download**: The system now includes built-in dataset download functionality
+- **Kaggle API Support**: For the casting dataset, install `kaggle` package and configure API token
+- **Smart Fallback**: If download fails or no dataset exists, the system automatically creates dummy datasets for testing
+- **Dummy Dataset**: Use `--create-dummy` to explicitly create test data with 370 synthetic images
+- For production use, manually place your real dataset under `data/` as shown above
 
 ## 🚀 Quick Start
 
-### Option 1: Complete Pipeline
+### Option 1: Complete Pipeline with Dummy Data
 ```bash
 # Activate environment
 source venv/bin/activate
 
-# Run full pipeline with optimized settings
-python main.py --mode full --epochs 30 --batch-size 16 --learning-rate 0.0001
+# Create dummy dataset and run full pipeline
+python main.py --mode full --create-dummy --epochs 10 --batch-size 8
 
 # Launch interactive dashboard
 streamlit run dashboard/app.py
 ```
 
-### Option 2: Step-by-Step
+### Option 2: Download Real Data (Kaggle API Required)
 ```bash
-# 1. Train model with early stopping
+# Install and configure Kaggle API first:
+# pip install kaggle
+# Set up API token from kaggle.com/account
+
+# Download dataset and run pipeline
+python main.py --mode full --download-data --dataset-name casting --epochs 30
+
+# Launch interactive dashboard
+streamlit run dashboard/app.py
+```
+
+### Option 3: Step-by-Step with Custom Data
+```bash
+# 1. Place your data in data/train/{ok,defective}/ and data/val/{ok,defective}/
+
+# 2. Train model with early stopping
 python main.py --mode train --epochs 50 --early-stopping-patience 10
 
-# 2. Evaluate trained model
+# 3. Evaluate trained model
 python main.py --mode evaluate --model-path results/models/best_model.pth
 
-# 3. Generate explanations
+# 4. Generate explanations
 python main.py --mode explain --model-path results/models/best_model.pth --num-explanation-samples 10
 
-# 4. Launch dashboard
+# 5. Launch dashboard
 streamlit run dashboard/app.py
 ```
 
@@ -189,7 +206,8 @@ python main.py [--mode MODE] [OPTIONS]
 #### Data & Model Options
 ```bash
 --data-dir DATA_DIR           # Dataset directory (default: data)
---download-data               # Download dataset before training
+--download-data               # Download dataset before training (requires Kaggle API for some datasets)
+--create-dummy                # Create dummy dataset for testing
 --dataset-name {casting,mvtec,neu}  # Dataset to download (default: casting)
 --model-type {resnet50,efficientnet,vgg16,simple}  # Architecture (default: resnet50)
 --model-path MODEL_PATH       # Path to saved model (for eval/explain)

@@ -30,20 +30,142 @@ def setup_directories():
         os.makedirs(dir_path, exist_ok=True)
         print(f"Created directory: {dir_path}")
 
-def download_dataset(dataset_name='casting'):
+def download_dataset(dataset_name='casting', data_dir='data'):
     """Download and setup dataset."""
-    print(f"Downloading {dataset_name} dataset...")
+    import urllib.request
+    import zipfile
+    import tarfile
+    from pathlib import Path
+    
+    print(f"🔽 Downloading {dataset_name} dataset...")
+    
+    # Create data directory
+    data_path = Path(data_dir)
+    data_path.mkdir(parents=True, exist_ok=True)
     
     try:
         if dataset_name == 'casting':
-            os.system("python scripts/download_dataset.py --dataset casting --data-dir data")
-        else:
-            print(f"Dataset {dataset_name} not supported yet.")
+            print("📦 Downloading Casting Product Image Dataset...")
+            
+            # Kaggle dataset URL (this is a public dataset)
+            url = "https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product"
+            
+            print("⚠️  Note: This requires Kaggle API or manual download.")
+            print("   Please follow these steps:")
+            print("   1. Visit: https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product")
+            print("   2. Download the dataset manually")
+            print("   3. Extract to the 'data/' directory")
+            print("   4. Ensure structure: data/train/{defective,ok}/ and data/test/{defective,ok}/")
+            
+            # Try Kaggle API if available
+            try:
+                import kaggle
+                print("🔑 Kaggle API found, attempting download...")
+                kaggle.api.dataset_download_files(
+                    'ravirajsinh45/real-life-industrial-dataset-of-casting-product',
+                    path=data_dir,
+                    unzip=True
+                )
+                print("✅ Kaggle dataset downloaded successfully!")
+                return True
+            except ImportError:
+                print("💡 Install kaggle API: pip install kaggle")
+                print("   Then configure: kaggle api token from kaggle.com/account")
+            except Exception as e:
+                print(f"❌ Kaggle API error: {e}")
+            
             return False
-        return True
+            
+        elif dataset_name == 'mvtec':
+            print("📦 Downloading MVTec Anomaly Detection Dataset...")
+            
+            # MVTec AD dataset categories
+            categories = ['bottle', 'cable', 'capsule', 'carpet', 'grid',
+                         'hazelnut', 'leather', 'metal_nut', 'pill', 'screw',
+                         'tile', 'toothbrush', 'transistor', 'wood', 'zipper']
+            
+            print("⚠️  MVTec dataset is large (4.9GB). Consider downloading specific categories.")
+            print("   Visit: https://www.mvtec.com/company/research/datasets/mvtec-ad")
+            print("   Manual download required due to license agreement.")
+            
+            return False
+            
+        elif dataset_name == 'neu':
+            print("📦 Downloading NEU Surface Defect Dataset...")
+            
+            # NEU dataset (smaller, might be available for direct download)
+            print("⚠️  NEU Steel Surface Defect dataset")
+            print("   Visit: http://faculty.neu.edu.cn/yunhyan/NEU_surface_defect_database.html")
+            print("   Manual download required.")
+            
+            return False
+            
+        else:
+            print(f"❌ Dataset '{dataset_name}' not supported.")
+            print("   Supported datasets: casting, mvtec, neu")
+            return False
+            
     except Exception as e:
-        print(f"Error downloading dataset: {e}")
+        print(f"❌ Error downloading dataset: {e}")
         return False
+
+def create_dummy_dataset(data_dir='data'):
+    """Create a dummy dataset for testing when real data is not available."""
+    import numpy as np
+    from PIL import Image
+    from pathlib import Path
+    
+    print("🎯 Creating dummy dataset for testing...")
+    
+    data_path = Path(data_dir)
+    
+    # Create directory structure
+    dirs = [
+        data_path / 'train' / 'ok',
+        data_path / 'train' / 'defective',
+        data_path / 'val' / 'ok',
+        data_path / 'val' / 'defective',
+        data_path / 'test' / 'ok',
+        data_path / 'test' / 'defective'
+    ]
+    
+    for dir_path in dirs:
+        dir_path.mkdir(parents=True, exist_ok=True)
+    
+    # Generate dummy images
+    np.random.seed(42)  # For reproducible dummy data
+    
+    splits = {
+        'train': {'ok': 100, 'defective': 100},
+        'val': {'ok': 20, 'defective': 20},
+        'test': {'ok': 30, 'defective': 30}
+    }
+    
+    for split, classes in splits.items():
+        for class_name, count in classes.items():
+            class_dir = data_path / split / class_name
+            
+            for i in range(count):
+                # Create dummy image
+                if class_name == 'ok':
+                    # Mostly uniform gray image (simulating good product)
+                    img_array = np.random.randint(100, 150, (224, 224, 3), dtype=np.uint8)
+                else:
+                    # Add some "defects" - darker spots and noise
+                    img_array = np.random.randint(80, 120, (224, 224, 3), dtype=np.uint8)
+                    # Add random dark spots (simulating defects)
+                    for _ in range(np.random.randint(3, 8)):
+                        x, y = np.random.randint(0, 200, 2)
+                        img_array[x:x+24, y:y+24] = np.random.randint(20, 60, (24, 24, 3))
+                
+                # Save image
+                img = Image.fromarray(img_array)
+                img_path = class_dir / f'{class_name}_{i:04d}.jpg'
+                img.save(img_path)
+    
+    print(f"✅ Created dummy dataset with {sum(sum(classes.values()) for classes in splits.values())} images")
+    print(f"   Structure: {data_dir}/{{train,val,test}}/{{ok,defective}}/")
+    return True
 
 def train_model(config):
     """Train the quality inspection model with optimizations."""
@@ -191,11 +313,25 @@ def run_complete_pipeline(config):
     # Setup directories
     setup_directories()
     
-    # Download dataset (if specified)
-    if config.get('download_data', False):
-        if not download_dataset(config.get('dataset_name', 'casting')):
-            print("Dataset download failed. Please download manually.")
-            return
+    # Handle dataset setup
+    if config.get('create_dummy', False):
+        print("🎯 Creating dummy dataset for testing...")
+        create_dummy_dataset(config['data_dir'])
+    elif config.get('download_data', False):
+        print("🔽 Attempting to download dataset...")
+        if not download_dataset(config.get('dataset_name', 'casting'), config['data_dir']):
+            print("⚠️  Dataset download failed. Creating dummy dataset for testing...")
+            create_dummy_dataset(config['data_dir'])
+    else:
+        # Check if dataset exists, if not create dummy
+        import os
+        data_exists = (
+            os.path.exists(os.path.join(config['data_dir'], 'train', 'ok')) and
+            os.path.exists(os.path.join(config['data_dir'], 'train', 'defective'))
+        )
+        if not data_exists:
+            print("⚠️  No dataset found. Creating dummy dataset for testing...")
+            create_dummy_dataset(config['data_dir'])
     
     # Train model
     if config.get('train', True):
@@ -209,8 +345,8 @@ def run_complete_pipeline(config):
     # Evaluate model
     if config.get('evaluate', True):
         evaluate_model(
-            config['model_path'], 
-            config['data_dir'], 
+            config['model_path'],
+            config['data_dir'],
             config
         )
     
@@ -241,10 +377,12 @@ def main():
                        help='Pipeline mode')
     
     # Data arguments
-    parser.add_argument('--data-dir', default='data', 
+    parser.add_argument('--data-dir', default='data',
                        help='Path to dataset directory')
     parser.add_argument('--download-data', action='store_true',
                        help='Download dataset before training')
+    parser.add_argument('--create-dummy', action='store_true',
+                       help='Create dummy dataset for testing')
     parser.add_argument('--dataset-name', default='casting',
                        choices=['casting', 'mvtec', 'neu'],
                        help='Dataset to download')
@@ -299,6 +437,7 @@ def main():
         'mode': args.mode,
         'data_dir': args.data_dir,
         'download_data': args.download_data,
+        'create_dummy': args.create_dummy,
         'dataset_name': args.dataset_name,
         'model_type': args.model_type,
         'model_path': args.model_path,
