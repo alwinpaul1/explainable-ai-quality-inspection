@@ -213,7 +213,6 @@ python main.py [--mode MODE] [OPTIONS]
 --data-dir DATA_DIR           # Dataset directory (default: data)
 --download-data               # Download casting dataset before training
 --create-dummy                # Create dummy dataset for testing
---model-type {simple}  # Architecture (only simple CNN supported)
 --model-path MODEL_PATH       # Path to saved model (for eval/explain)
 --num-classes NUM_CLASSES     # Number of classes (default: 2)
 ```
