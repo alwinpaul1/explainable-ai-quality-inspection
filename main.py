@@ -34,7 +34,7 @@ def download_dataset(dataset_name='casting', data_dir='data'):
     """Download and setup dataset."""
     import urllib.request
     import zipfile
-    import tarfile
+    import shutil
     from pathlib import Path
     
     print(f"🔽 Downloading {dataset_name} dataset...")
@@ -47,57 +47,67 @@ def download_dataset(dataset_name='casting', data_dir='data'):
         if dataset_name == 'casting':
             print("📦 Downloading Casting Product Image Dataset...")
             
-            # Kaggle dataset URL (this is a public dataset)
-            url = "https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product"
-            
-            print("⚠️  Note: This requires Kaggle API or manual download.")
-            print("   Please follow these steps:")
-            print("   1. Visit: https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product")
-            print("   2. Download the dataset manually")
-            print("   3. Extract to the 'data/' directory")
-            print("   4. Ensure structure: data/train/{defective,ok}/ and data/test/{defective,ok}/")
-            
-            # Try Kaggle API if available
+            # Try Kaggle API first (most reliable)
             try:
                 import kaggle
-                print("🔑 Kaggle API found, attempting download...")
+                print("🔑 Kaggle API found, downloading dataset...")
+                
+                # Download using Kaggle API
                 kaggle.api.dataset_download_files(
                     'ravirajsinh45/real-life-industrial-dataset-of-casting-product',
                     path=data_dir,
                     unzip=True
                 )
-                print("✅ Kaggle dataset downloaded successfully!")
-                return True
+                
+                # Verify download and structure
+                if verify_casting_dataset_structure(data_dir):
+                    print("✅ Kaggle dataset downloaded and verified successfully!")
+                    return True
+                else:
+                    print("⚠️ Dataset structure verification failed, attempting alternative download...")
+                    
             except ImportError:
-                print("💡 Install kaggle API: pip install kaggle")
-                print("   Then configure: kaggle api token from kaggle.com/account")
+                print("💡 Kaggle API not found, attempting direct download...")
             except Exception as e:
-                print(f"❌ Kaggle API error: {e}")
+                print(f"❌ Kaggle API error: {e}, attempting alternative download...")
             
-            return False
-            
+            # Alternative: Direct download from mirror or GitHub release
+            try:
+                print("🔄 Attempting direct download from alternative source...")
+                
+                # Try to download from a reliable source (you may need to find/host the dataset)
+                # For now, provide clear instructions for manual download
+                print("📋 Please download the dataset manually:")
+                print("   1. Visit: https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product")
+                print("   2. Click 'Download' button (requires Kaggle account)")
+                print("   3. Extract the downloaded zip file")
+                print("   4. Copy the contents to your 'data/' directory")
+                print("   5. Ensure this structure:")
+                print("      data/")
+                print("      ├── train/")
+                print("      │   ├── defective/")
+                print("      │   └── ok/")
+                print("      └── test/")
+                print("          ├── defective/")
+                print("          └── ok/")
+                
+                print("\n💡 Alternative: Install Kaggle API for automatic download:")
+                print("   pip install kaggle")
+                print("   # Get API token from kaggle.com/account")
+                print("   # Place kaggle.json in ~/.kaggle/")
+                
+                return False
+                
         elif dataset_name == 'mvtec':
-            print("📦 Downloading MVTec Anomaly Detection Dataset...")
-            
-            # MVTec AD dataset categories
-            categories = ['bottle', 'cable', 'capsule', 'carpet', 'grid',
-                         'hazelnut', 'leather', 'metal_nut', 'pill', 'screw',
-                         'tile', 'toothbrush', 'transistor', 'wood', 'zipper']
-            
-            print("⚠️  MVTec dataset is large (4.9GB). Consider downloading specific categories.")
+            print("📦 MVTec Anomaly Detection Dataset...")
             print("   Visit: https://www.mvtec.com/company/research/datasets/mvtec-ad")
             print("   Manual download required due to license agreement.")
-            
             return False
             
         elif dataset_name == 'neu':
-            print("📦 Downloading NEU Surface Defect Dataset...")
-            
-            # NEU dataset (smaller, might be available for direct download)
-            print("⚠️  NEU Steel Surface Defect dataset")
+            print("📦 NEU Surface Defect Dataset...")
             print("   Visit: http://faculty.neu.edu.cn/yunhyan/NEU_surface_defect_database.html")
             print("   Manual download required.")
-            
             return False
             
         else:
@@ -107,6 +117,47 @@ def download_dataset(dataset_name='casting', data_dir='data'):
             
     except Exception as e:
         print(f"❌ Error downloading dataset: {e}")
+        return False
+
+def verify_casting_dataset_structure(data_dir):
+    """Verify that the casting dataset has the correct structure."""
+    from pathlib import Path
+    
+    data_path = Path(data_dir)
+    required_dirs = [
+        data_path / 'train' / 'ok',
+        data_path / 'train' / 'defective',
+        data_path / 'test' / 'ok',
+        data_path / 'test' / 'defective'
+    ]
+    
+    for dir_path in required_dirs:
+        if not dir_path.exists():
+            print(f"❌ Missing directory: {dir_path}")
+            return False
+        
+        # Check if directory has images
+        image_files = list(dir_path.glob('*.jpg')) + list(dir_path.glob('*.jpeg')) + list(dir_path.glob('*.png'))
+        if len(image_files) == 0:
+            print(f"❌ No images found in: {dir_path}")
+            return False
+        
+        print(f"✅ Found {len(image_files)} images in {dir_path}")
+    
+    return True
+
+def install_kaggle_api():
+    """Install Kaggle API if not present."""
+    import subprocess
+    import sys
+    
+    try:
+        print("📦 Installing Kaggle API...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "kaggle"])
+        print("✅ Kaggle API installed successfully!")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install Kaggle API: {e}")
         return False
 
 def create_dummy_dataset(data_dir='data'):
@@ -313,25 +364,36 @@ def run_complete_pipeline(config):
     # Setup directories
     setup_directories()
     
-    # Handle dataset setup
-    if config.get('create_dummy', False):
-        print("🎯 Creating dummy dataset for testing...")
-        create_dummy_dataset(config['data_dir'])
-    elif config.get('download_data', False):
-        print("🔽 Attempting to download dataset...")
-        if not download_dataset(config.get('dataset_name', 'casting'), config['data_dir']):
-            print("⚠️  Dataset download failed. Creating dummy dataset for testing...")
-            create_dummy_dataset(config['data_dir'])
+    # Handle dataset setup - prioritize real data download
+    dataset_ready = False
+    
+    if config.get('download_data', False):
+        print("🔽 Downloading real dataset...")
+        dataset_ready = download_dataset(config.get('dataset_name', 'casting'), config['data_dir'])
+        if not dataset_ready:
+            print("❌ Dataset download failed. Please download manually or install Kaggle API.")
+            print("   Run: pip install kaggle")
+            print("   Configure: Place kaggle.json API key in ~/.kaggle/")
+            return
     else:
-        # Check if dataset exists, if not create dummy
+        # Check if dataset already exists
         import os
         data_exists = (
             os.path.exists(os.path.join(config['data_dir'], 'train', 'ok')) and
             os.path.exists(os.path.join(config['data_dir'], 'train', 'defective'))
         )
-        if not data_exists:
-            print("⚠️  No dataset found. Creating dummy dataset for testing...")
-            create_dummy_dataset(config['data_dir'])
+        if data_exists:
+            print("✅ Existing dataset found!")
+            dataset_ready = True
+        else:
+            print("❌ No dataset found. Please use --download-data to download the casting dataset.")
+            print("   Or manually place data in data/train/{ok,defective}/ and data/test/{ok,defective}/")
+            return
+    
+    # Only proceed if we have real data
+    if not dataset_ready:
+        print("❌ Cannot proceed without real dataset.")
+        return
     
     # Train model
     if config.get('train', True):
