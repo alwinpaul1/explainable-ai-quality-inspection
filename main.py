@@ -385,10 +385,7 @@ def main():
     parser.add_argument('--create-dummy', action='store_true',
                        help='Create dummy dataset for testing')
     
-    # Model arguments
-    parser.add_argument('--model-type', default='simple',
-                       choices=['simple'],  # Only simple CNN following notebook
-                       help='Model architecture (only simple CNN supported)')
+    # Model arguments (TensorFlow/Keras only)
     parser.add_argument('--model-path', 
                        help='Path to pre-trained model (for evaluation/explanation)')
     parser.add_argument('--num-classes', type=int, default=2,
@@ -432,7 +429,7 @@ def main():
         'data_dir': args.data_dir,
         'download_data': args.download_data,
         'create_dummy': args.create_dummy,
-        'model_type': args.model_type,
+        'model_type': 'simple',  # Fixed to simple CNN following notebook
         'model_path': args.model_path,
         'num_classes': 1,  # Binary classification with sigmoid
         'epochs': args.epochs,

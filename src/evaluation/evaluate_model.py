@@ -92,7 +92,8 @@ class ModelEvaluator:
         # Classification report
         print("\n📋 Classification Report:")
         report = classification_report(y_true_class, y_pred_class, digits=4, 
-                                     target_names=['ok', 'defect'])\n        print(report)
+                                     target_names=['ok', 'defect'])
+        print(report)
         
         # Save confusion matrix plot
         if save_plots:
@@ -122,17 +123,17 @@ class ModelEvaluator:
         # Save results to file
         results_file = os.path.join(save_dir, 'evaluation_results.txt')
         with open(results_file, 'w') as f:
-            f.write("MODEL EVALUATION RESULTS\\n")
-            f.write("="*50 + "\\n\\n")
-            f.write(f"Test Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)\\n\\n")
-            f.write("Confusion Matrix:\\n")
-            f.write(str(cm_df) + "\\n\\n")
-            f.write("Classification Report:\\n")
-            f.write(report + "\\n\\n")
-            f.write(f"Misclassified samples: {len(misclassified_indices)} out of {len(y_true_class)}\\n")
-            f.write(f"Classification threshold: {threshold}\\n")
+            f.write("MODEL EVALUATION RESULTS\n")
+            f.write("="*50 + "\n\n")
+            f.write(f"Test Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)\n\n")
+            f.write("Confusion Matrix:\n")
+            f.write(str(cm_df) + "\n\n")
+            f.write("Classification Report:\n")
+            f.write(report + "\n\n")
+            f.write(f"Misclassified samples: {len(misclassified_indices)} out of {len(y_true_class)}\n")
+            f.write(f"Classification threshold: {threshold}\n")
         
-        print(f"\\n💾 Results saved to: {results_file}")
+        print(f"\n💾 Results saved to: {results_file}")
         
         return results
     
@@ -237,7 +238,7 @@ class ModelEvaluator:
                 axes[i].imshow(img.squeeze(), cmap="gray")
                 axes[i].set_title(f"TRUE LABEL: {true_label}", fontweight="bold", fontsize=14)
                 axes[i].set_xlabel(
-                    f"PREDICTED LABEL: {pred_label}\\nProb({pred_label}) = {prob_class:.2f}%",
+                    f"PREDICTED LABEL: {pred_label}\nProb({pred_label}) = {prob_class:.2f}%",
                     fontweight="bold", fontsize=12, color="red"
                 )
                 axes[i].set_xticks([])
