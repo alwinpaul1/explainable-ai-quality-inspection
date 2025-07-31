@@ -53,14 +53,9 @@ class ModelExplainer:
         # LIME explainer
         self.lime_explainer = lime_image.LimeImageExplainer()
         
-        # SHAP explainer (using DeepExplainer for neural networks)
-        try:
-            # Create background dataset for SHAP (small sample)
-            background = np.zeros((10, *self.input_shape))
-            self.shap_explainer = shap.DeepExplainer(self.model, background)
-        except Exception as e:
-            print(f"Warning: SHAP initialization failed: {e}")
-            self.shap_explainer = None
+        # SHAP explainer will be initialized lazily with actual data
+        self.shap_explainer = None
+        self.shap_background = None
     
     def predict_fn(self, images):
         """Prediction function for LIME (TensorFlow compatible)."""
@@ -137,12 +132,51 @@ class ModelExplainer:
             print(f"LIME explanation failed: {e}")
             return None
     
+    def _create_shap_background(self, sample_image):
+        """Create a meaningful background dataset for SHAP."""
+        try:
+            # Create diverse background samples
+            backgrounds = []
+            
+            # Add the sample image itself (normalized)
+            backgrounds.append(sample_image)
+            
+            # Add variations: darker, lighter, blurred versions
+            darker = np.clip(sample_image * 0.5, 0, 1)
+            lighter = np.clip(sample_image * 1.5, 0, 1)
+            backgrounds.extend([darker, lighter])
+            
+            # Add noise variations
+            for i in range(3):
+                noise = np.random.normal(0, 0.05, sample_image.shape)
+                noisy = np.clip(sample_image + noise, 0, 1)
+                backgrounds.append(noisy)
+            
+            # Add uniform backgrounds
+            backgrounds.append(np.zeros_like(sample_image))  # Black
+            backgrounds.append(np.ones_like(sample_image) * 0.5)  # Gray
+            backgrounds.append(np.ones_like(sample_image))  # White
+            
+            # Add edge-enhanced version
+            from scipy import ndimage
+            edges = ndimage.sobel(sample_image.squeeze())
+            edges = np.expand_dims(edges, axis=-1)
+            edges = (edges - edges.min()) / (edges.max() - edges.min() + 1e-8)
+            backgrounds.append(edges)
+            
+            return np.array(backgrounds[:10])  # Use up to 10 backgrounds
+            
+        except Exception as e:
+            print(f"Warning: Could not create enhanced background, using simple backgrounds: {e}")
+            # Fallback to simple backgrounds
+            backgrounds = []
+            backgrounds.append(np.zeros_like(sample_image))
+            backgrounds.append(np.ones_like(sample_image) * 0.5)
+            backgrounds.append(sample_image)
+            return np.array(backgrounds)
+    
     def explain_with_shap(self, image):
-        """Generate SHAP explanation for TensorFlow model."""
-        if self.shap_explainer is None:
-            print("SHAP explainer not available")
-            return None
-        
+        """Generate SHAP explanation for TensorFlow model with improved background."""
         # Preprocess image
         if isinstance(image, str):
             image = np.array(Image.open(image).convert('L'))  # Load as grayscale
@@ -162,6 +196,17 @@ class ModelExplainer:
         
         # Add batch dimension
         image_batch = np.expand_dims(image, axis=0)
+        
+        # Initialize SHAP explainer lazily with meaningful background
+        if self.shap_explainer is None:
+            try:
+                print("Initializing SHAP explainer with enhanced background...")
+                background = self._create_shap_background(image)
+                self.shap_explainer = shap.DeepExplainer(self.model, background)
+                print(f"SHAP explainer initialized with {len(background)} background samples")
+            except Exception as e:
+                print(f"SHAP initialization failed: {e}")
+                return None, None
         
         try:
             shap_values = self.shap_explainer.shap_values(image_batch)
@@ -190,43 +235,68 @@ class ModelExplainer:
             image = image / 255.0
         
         # Add batch dimension
-        image_batch = tf.convert_to_tensor(np.expand_dims(image, axis=0))
+        image_batch = tf.convert_to_tensor(np.expand_dims(image, axis=0), dtype=tf.float32)
+        
+        # Ensure model is built by doing a forward pass
+        try:
+            # Build the model if it hasn't been built yet
+            if not hasattr(self.model, '_built') or not self.model.built:
+                self.model.build(input_shape=(None, *self.input_shape))
+            _ = self.model(image_batch)
+        except Exception as e:
+            print(f"Error building model: {e}")
+            return None, None
         
         # Find last convolutional layer if not specified
         if layer_name is None:
-            for layer in reversed(self.model.layers):
-                if 'conv' in layer.name.lower():
-                    layer_name = layer.name
-                    break
-        
-        if layer_name is None:
-            print("No convolutional layer found for Grad-CAM")
-            return None
+            conv_layers = [layer.name for layer in self.model.layers if 'conv2d' in layer.name.lower()]
+            if conv_layers:
+                layer_name = conv_layers[-1]  # Use the last conv layer
+            else:
+                print("No convolutional layer found for Grad-CAM")
+                return None, None
         
         try:
-            # Create a model that outputs both the original prediction and the feature maps
-            grad_model = tf.keras.models.Model(
-                [self.model.inputs], 
-                [self.model.get_layer(layer_name).output, self.model.output]
-            )
-            
+            # For Sequential models, use a simpler approach
+            # Get intermediate output directly from the layer
             with tf.GradientTape() as tape:
-                conv_outputs, predictions = grad_model(image_batch)
-                class_idx = tf.argmax(predictions[0])
-                loss = predictions[:, class_idx]
+                tape.watch(image_batch)
+                
+                # Forward pass through the model
+                predictions = self.model(image_batch)
+                
+                # Get intermediate layer output
+                intermediate_model = tf.keras.Model(
+                    inputs=self.model.input,
+                    outputs=self.model.get_layer(layer_name).output
+                )
+                conv_outputs = intermediate_model(image_batch)
+                
+                # For binary classification with sigmoid, use the raw prediction value
+                if self.num_classes == 1:
+                    loss = predictions[0, 0]  # Single output for binary classification
+                else:
+                    class_idx = tf.argmax(predictions[0])
+                    loss = predictions[0, class_idx]
             
             # Compute gradients
             grads = tape.gradient(loss, conv_outputs)
+            
+            if grads is None:
+                print("No gradients computed for Grad-CAM")
+                return None, None
             
             # Global average pooling of gradients
             pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
             
             # Weight feature maps by gradients
             conv_outputs = conv_outputs[0]
-            heatmap = tf.reduce_mean(tf.multiply(pooled_grads, conv_outputs), axis=-1)
+            heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
             
             # Normalize heatmap
-            heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
+            heatmap = tf.maximum(heatmap, 0)
+            if tf.reduce_max(heatmap) > 0:
+                heatmap = heatmap / tf.reduce_max(heatmap)
             
             return heatmap.numpy(), predictions.numpy()[0]
             
@@ -295,10 +365,17 @@ class ModelExplainer:
             if len(shap_attr.shape) == 3:
                 shap_attr = np.mean(shap_attr, axis=-1)
             
-            im = axes[0, 2].imshow(shap_attr, cmap='RdBu_r')
+            # Enhance SHAP visualization with better scaling
+            vmax = max(abs(shap_attr.min()), abs(shap_attr.max()))
+            if vmax > 0:
+                im = axes[0, 2].imshow(shap_attr, cmap='RdBu_r', vmin=-vmax, vmax=vmax)
+                cbar = plt.colorbar(im, ax=axes[0, 2], shrink=0.8)
+                cbar.set_label('SHAP Value', rotation=270, labelpad=20)
+            else:
+                axes[0, 2].imshow(shap_attr, cmap='RdBu_r')
+                
             axes[0, 2].set_title('SHAP Explanation')
             axes[0, 2].axis('off')
-            plt.colorbar(im, ax=axes[0, 2], shrink=0.8)
         else:
             axes[0, 2].text(0.5, 0.5, 'SHAP\nNot Available', 
                            ha='center', va='center', transform=axes[0, 2].transAxes)
@@ -318,8 +395,9 @@ class ModelExplainer:
             axes[1, 0].axis('off')
             plt.colorbar(im, ax=axes[1, 0], shrink=0.8)
         else:
-            axes[1, 0].text(0.5, 0.5, 'Grad-CAM\nNot Available', 
-                           ha='center', va='center', transform=axes[1, 0].transAxes)
+            axes[1, 0].text(0.5, 0.5, 'Grad-CAM\n(Sequential Model\nLimitation)', 
+                           ha='center', va='center', transform=axes[1, 0].transAxes, fontsize=10)
+            axes[1, 0].set_title('Grad-CAM')
             axes[1, 0].axis('off')
         
         # Prediction probabilities
