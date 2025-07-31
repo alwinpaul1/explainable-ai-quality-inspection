@@ -25,9 +25,6 @@ explainable-ai-quality-inspection/
 │   ├── assets/               # Dashboard assets
 │   └── components/           # Dashboard components
 ├── 📁 data/                   # Dataset storage
-│   ├── raw/                  # Raw dataset files
-│   ├── processed/            # Processed datasets
-│   ├── splits/               # Train/validation/test splits
 │   ├── test/                 # Test dataset
 │   └── train/                # Training dataset
 ├── 📁 results/                # Training results and outputs
