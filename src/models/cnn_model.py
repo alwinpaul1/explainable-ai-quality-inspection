@@ -1,53 +1,160 @@
 """
-CNN models for quality inspection with explainability support
+CNN models for quality inspection following the notebook approach
 """
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torchvision import models
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers, models
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-class QualityInspectionCNN(nn.Module):
-    """CNN model for quality inspection with feature extraction capabilities."""
+def create_simple_cnn(input_shape=(300, 300, 1), num_classes=1):
+    """
+    Create simple CNN model following the notebook architecture.
     
-    def __init__(self, num_classes=2, backbone='resnet50', pretrained=True, dropout=0.5):
-        """
-        Args:
-            num_classes: Number of output classes
-            backbone: Backbone architecture ('resnet50', 'efficientnet', 'vgg16')
-            pretrained: Use pretrained weights
-            dropout: Dropout rate
-        """
-        super(QualityInspectionCNN, self).__init__()
+    Args:
+        input_shape: Input image shape (height, width, channels)
+        num_classes: Number of output classes (1 for binary classification)
+    
+    Returns:
+        Compiled Keras model
+    """
+    model = models.Sequential([
+        # First convolutional layer
+        layers.Conv2D(filters=32,
+                     kernel_size=3,
+                     strides=2,
+                     activation='relu',
+                     input_shape=input_shape),
         
+        # First pooling layer
+        layers.MaxPooling2D(pool_size=2,
+                           strides=2),
+        
+        # Second convolutional layer
+        layers.Conv2D(filters=16,
+                     kernel_size=3,
+                     strides=2,
+                     activation='relu'),
+        
+        # Second pooling layer
+        layers.MaxPooling2D(pool_size=2,
+                           strides=2),
+        
+        # Flattening
+        layers.Flatten(),
+        
+        # Fully-connected layers
+        layers.Dense(128, activation='relu'),
+        layers.Dropout(rate=0.2),
+        
+        layers.Dense(64, activation='relu'),
+        layers.Dropout(rate=0.2),
+        
+        layers.Dense(num_classes, activation='sigmoid')
+    ])
+    
+    return model
+
+def create_data_generators(train_path, test_path, image_size=(300, 300), batch_size=64, seed=123):
+    """
+    Create data generators following the notebook approach.
+    
+    Args:
+        train_path: Path to training data
+        test_path: Path to test data
+        image_size: Target image size
+        batch_size: Batch size
+        seed: Random seed for reproducibility
+    
+    Returns:
+        train_dataset, validation_dataset, test_dataset
+    """
+    # Training data generator with augmentation
+    train_generator = ImageDataGenerator(
+        rotation_range=360,
+        width_shift_range=0.05,
+        height_shift_range=0.05,
+        shear_range=0.05,
+        zoom_range=0.05,
+        horizontal_flip=True,
+        vertical_flip=True,
+        brightness_range=[0.75, 1.25],
+        rescale=1./255,
+        validation_split=0.2
+    )
+    
+    # Test data generator (no augmentation)
+    test_generator = ImageDataGenerator(rescale=1./255)
+    
+    gen_args = dict(
+        target_size=image_size,
+        color_mode="grayscale",
+        batch_size=batch_size,
+        class_mode="binary",
+        classes={"ok": 0, "defective": 1},  # Updated class names
+        shuffle=True,
+        seed=seed
+    )
+    
+    train_dataset = train_generator.flow_from_directory(
+        directory=train_path,
+        subset="training",
+        **gen_args
+    )
+    
+    validation_dataset = train_generator.flow_from_directory(
+        directory=train_path,
+        subset="validation",
+        **gen_args
+    )
+    
+    test_dataset = test_generator.flow_from_directory(
+        directory=test_path,
+        **gen_args
+    )
+    
+    return train_dataset, validation_dataset, test_dataset
+
+class QualityInspectionModel:
+    """Quality inspection model following notebook approach."""
+    
+    def __init__(self, input_shape=(300, 300, 1), num_classes=1):
+        self.model = create_simple_cnn(input_shape, num_classes)
+        self.input_shape = input_shape
         self.num_classes = num_classes
-        self.backbone_name = backbone
         
-        # Initialize backbone
-        if backbone == 'resnet50':
-            weights = models.ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
-            self.backbone = models.resnet50(weights=weights)
-            self.feature_dim = self.backbone.fc.in_features
-            self.backbone.fc = nn.Identity()  # Remove final layer
-            
-        elif backbone == 'efficientnet':
-            weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
-            self.backbone = models.efficientnet_b0(weights=weights)
-            self.feature_dim = self.backbone.classifier[1].in_features
-            self.backbone.classifier = nn.Identity()
-            
-        elif backbone == 'vgg16':
-            weights = models.VGG16_Weights.IMAGENET1K_V1 if pretrained else None
-            self.backbone = models.vgg16(weights=weights)
-            self.feature_dim = self.backbone.classifier[6].in_features
-            self.backbone.classifier[6] = nn.Identity()
-            
-        else:
-            raise ValueError(f"Unsupported backbone: {backbone}")
+    def compile_model(self, optimizer='adam', loss='binary_crossentropy', metrics=['accuracy']):
+        """Compile the model."""
+        self.model.compile(
+            optimizer=optimizer,
+            loss=loss,
+            metrics=metrics
+        )
         
-        # Custom classifier with dropout
-        self.classifier = nn.Sequential(
-            nn.Dropout(dropout),
+    def get_model(self):
+        """Get the Keras model."""
+        return self.model
+
+# Legacy function for backward compatibility
+def create_model(model_type='simple', num_classes=1, pretrained=False, input_shape=(300, 300, 1)):
+    """
+    Create model with backward compatibility.
+    
+    Args:
+        model_type: Model type (only 'simple' supported now)
+        num_classes: Number of classes (1 for binary)
+        pretrained: Ignored (kept for compatibility)
+        input_shape: Input shape
+    
+    Returns:
+        Compiled Keras model
+    """
+    if model_type != 'simple':
+        print(f"Warning: {model_type} not supported, using simple CNN")
+    
+    quality_model = QualityInspectionModel(input_shape, num_classes)
+    quality_model.compile_model()
+    return quality_model.get_model()
             nn.Linear(self.feature_dim, 512),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout),

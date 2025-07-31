@@ -1,202 +1,249 @@
 """
-Dataset utilities for quality inspection
+Dataset utilities for quality inspection following notebook approach
 """
 
 import os
-import torch
-from PIL import Image
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
 import numpy as np
+import pandas as pd
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from PIL import Image
 
-class QualityInspectionDataset(Dataset):
-    """Dataset class for quality inspection images."""
+def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123):
+    """
+    Create data generators following the notebook approach.
     
-    def __init__(self, data_dir, split='train', transform=None, target_size=(224, 224)):
+    Args:
+        data_dir: Root directory containing train and test subdirs
+        image_size: Target image size (width, height)
+        batch_size: Batch size for training
+        seed: Random seed for reproducibility
+    
+    Returns:
+        train_dataset, validation_dataset, test_dataset
+    """
+    train_path = os.path.join(data_dir, 'train')
+    test_path = os.path.join(data_dir, 'test')
+    
+    # Check if val directory exists, otherwise use test
+    val_path = os.path.join(data_dir, 'val')
+    if not os.path.exists(val_path):
+        val_path = test_path
+    
+    # Training data generator with augmentation (following notebook)
+    train_generator = ImageDataGenerator(
+        rotation_range=360,
+        width_shift_range=0.05,
+        height_shift_range=0.05,
+        shear_range=0.05,
+        zoom_range=0.05,
+        horizontal_flip=True,
+        vertical_flip=True,
+        brightness_range=[0.75, 1.25],
+        rescale=1./255,
+        validation_split=0.2
+    )
+    
+    # Test data generator (no augmentation)
+    test_generator = ImageDataGenerator(rescale=1./255)
+    
+    gen_args = dict(
+        target_size=image_size,
+        color_mode="grayscale",  # Following notebook approach
+        batch_size=batch_size,
+        class_mode="binary",
+        classes={"ok": 0, "defective": 1},
+        shuffle=True,
+        seed=seed
+    )
+    
+    try:
+        train_dataset = train_generator.flow_from_directory(
+            directory=train_path,
+            subset="training",
+            **gen_args
+        )
+        
+        validation_dataset = train_generator.flow_from_directory(
+            directory=train_path,
+            subset="validation",
+            **gen_args
+        )
+        
+        # Use test directory for test dataset
+        test_dataset = test_generator.flow_from_directory(
+            directory=test_path,
+            **gen_args
+        )
+        
+        return train_dataset, validation_dataset, test_dataset
+        
+    except Exception as e:
+        print(f"Error creating data generators: {e}")
+        print("Please ensure data structure is:")
+        print("  data/")
+        print("  ├── train/")
+        print("  │   ├── ok/")
+        print("  │   └── defective/")
+        print("  └── test/")
+        print("      ├── ok/")
+        print("      └── defective/")
+        raise
+
+def analyze_data_distribution(train_dataset, validation_dataset, test_dataset):
+    """
+    Analyze and display data distribution following notebook approach.
+    
+    Args:
+        train_dataset: Training dataset
+        validation_dataset: Validation dataset
+        test_dataset: Test dataset
+    
+    Returns:
+        DataFrame with data distribution
+    """
+    import pandas as pd
+    
+    # Create data distribution analysis
+    image_data = []
+    
+    for dataset, typ in zip([train_dataset, validation_dataset, test_dataset], 
+                           ["train", "validation", "test"]):
+        for filename in dataset.filenames:
+            class_name = filename.split('/')[0]
+            image_data.append({
+                "data": typ,
+                "class": class_name,
+                "filename": filename.split('/')[1]
+            })
+    
+    image_df = pd.DataFrame(image_data)
+    data_crosstab = pd.crosstab(
+        index=image_df["data"],
+        columns=image_df["class"],
+        margins=True,
+        margins_name="Total"
+    )
+    
+    return data_crosstab
+
+# Legacy function for backward compatibility
+def get_data_loaders(data_dir, batch_size=64, num_workers=0, val_split=0.2):
+    """
+    Get data loaders - now returns TensorFlow datasets.
+    
+    Args:
+        data_dir: Root directory with train/test subdirs
+        batch_size: Batch size
+        num_workers: Ignored (kept for compatibility)
+        val_split: Validation split ratio
+    
+    Returns:
+        train_dataset, validation_dataset (TensorFlow datasets)
+    """
+    train_dataset, validation_dataset, _ = get_data_generators(
+        data_dir=data_dir,
+        batch_size=batch_size
+    )
+    return train_dataset, validation_dataset
+
+def visualize_image_batch(dataset, title, mapping_class={0: "ok", 1: "defect"}):
+    """
+    Visualize a batch of images following notebook approach.
+    
+    Args:
+        dataset: TensorFlow dataset
+        title: Title for the plot
+        mapping_class: Class mapping dictionary
+    
+    Returns:
+        Images array
+    """
+    import matplotlib.pyplot as plt
+    
+    images, labels = next(iter(dataset))
+    batch_size = len(images)
+    image_size = images.shape[1:3]
+    
+    # Determine grid size
+    grid_size = int(np.ceil(np.sqrt(batch_size)))
+    if batch_size <= 16:
+        rows, cols = 4, 4
+    else:
+        rows = cols = 8
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(16, 16))
+    
+    for i, (ax, img, label) in enumerate(zip(axes.flat, images, labels)):
+        if i >= batch_size:
+            ax.axis("off")
+            continue
+            
+        ax.imshow(img.squeeze(), cmap="gray")
+        ax.axis("off")
+        ax.set_title(mapping_class[int(label)], size=20)
+    
+    plt.tight_layout()
+    fig.suptitle(title, size=30, y=1.05, fontweight="bold")
+    plt.show()
+    
+    return images
+
+class QualityInspectionDataset:
+    """
+    Quality inspection dataset class for backward compatibility.
+    Now wraps TensorFlow dataset functionality.
+    """
+    
+    def __init__(self, data_dir, split='train', transform=None, target_size=(300, 300)):
         """
         Args:
             data_dir: Path to dataset directory
             split: 'train', 'val', or 'test'
-            transform: Optional transforms to apply
-            target_size: Target image size (height, width)
+            transform: Ignored (kept for compatibility)
+            target_size: Target image size
         """
         self.data_dir = data_dir
         self.split = split
         self.target_size = target_size
         
-        # Default transforms if none provided
-        if transform is None:
-            self.transform = transforms.Compose([
-                transforms.Resize(target_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                   std=[0.229, 0.224, 0.225])
-            ])
+        # Generate TensorFlow datasets
+        train_gen, val_gen, test_gen = get_data_generators(
+            data_dir, 
+            image_size=target_size,
+            batch_size=32
+        )
+        
+        if split == 'train':
+            self.dataset = train_gen
+        elif split == 'val':
+            self.dataset = val_gen
         else:
-            self.transform = transform
+            self.dataset = test_gen
+            
+        self.classes = ['ok', 'defective']
+        self.class_to_idx = {'ok': 0, 'defective': 1}
         
-        # Load dataset
-        self.samples = self._load_samples()
-        self.classes = self._get_classes()
-        self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
+        # Get samples info
+        self.samples = self._get_samples_info()
         
-    def _load_samples(self):
-        """Load image paths and labels."""
+    def _get_samples_info(self):
+        """Get sample information from TensorFlow dataset."""
         samples = []
-        
-        # Use direct train/test structure
-        train_dir = os.path.join(self.data_dir, 'train')
-        test_dir = os.path.join(self.data_dir, 'test')
-        
-        if self.split == 'train':
-            base_dir = train_dir
-        else:
-            base_dir = test_dir
-            
-        if not os.path.exists(base_dir):
-            # Try alternative structure
-            for class_dir in ['def_front', 'ok_front']:
-                class_path = os.path.join(self.data_dir, class_dir)
-                if os.path.exists(class_path):
-                    for img_file in os.listdir(class_path):
-                        if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                            img_path = os.path.join(class_path, img_file)
-                            label = 'defective' if 'def' in class_dir else 'ok'
-                            samples.append((img_path, label))
-        else:
-            # Standard train/test structure
-            for class_dir in os.listdir(base_dir):
-                class_path = os.path.join(base_dir, class_dir)
-                if os.path.isdir(class_path):
-                    for img_file in os.listdir(class_path):
-                        if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                            img_path = os.path.join(class_path, img_file)
-                            samples.append((img_path, class_dir))
-        
+        for filename in self.dataset.filenames:
+            class_name = filename.split('/')[0]
+            full_path = os.path.join(self.data_dir, self.split, filename)
+            samples.append((full_path, class_name))
         return samples
-    
-    def _get_classes(self):
-        """Get unique class names."""
-        classes = list(set([sample[1] for sample in self.samples]))
-        return sorted(classes)
-    
-    def __len__(self):
-        return len(self.samples)
-    
-    def __getitem__(self, idx):
-        img_path, label = self.samples[idx]
-        
-        # Load image
-        try:
-            image = Image.open(img_path).convert('RGB')
-        except Exception as e:
-            print(f"Error loading image {img_path}: {e}")
-            # Return a dummy image if loading fails
-            image = Image.new('RGB', self.target_size, color=(0, 0, 0))
-        
-        # Apply transforms
-        if self.transform:
-            image = self.transform(image)
-        
-        # Convert label to index
-        label_idx = self.class_to_idx[label]
-        
-        return image, label_idx, img_path
-
-def get_data_loaders(data_dir, batch_size=32, num_workers=4, val_split=0.2):
-    """Create train and validation data loaders."""
-    
-    # Enhanced data augmentation for training
-    train_transform = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.RandomCrop((224, 224)),
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomVerticalFlip(p=0.3),
-        transforms.RandomRotation(degrees=20),
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
-        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
-        transforms.RandomGrayscale(p=0.1),
-        transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                           std=[0.229, 0.224, 0.225]),
-        transforms.RandomErasing(p=0.1, scale=(0.02, 0.33), ratio=(0.3, 3.3))
-    ])
-    
-    # Standard transform for validation
-    val_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                           std=[0.229, 0.224, 0.225])
-    ])
-    
-    # Create datasets
-    try:
-        train_dataset = QualityInspectionDataset(
-            data_dir, split='train', transform=train_transform
-        )
-        
-        # Try to load test set, if not available, split train set
-        try:
-            val_dataset = QualityInspectionDataset(
-                data_dir, split='test', transform=val_transform
-            )
-        except (FileNotFoundError, OSError) as _:
-            # Split train dataset for validation
-            total_size = len(train_dataset)
-            val_size = int(total_size * val_split)
-            train_size = total_size - val_size
-            
-            train_dataset, val_dataset = torch.utils.data.random_split(
-                train_dataset, [train_size, val_size]
-            )
-            
-            # Apply validation transform to val_dataset
-            val_dataset.dataset.transform = val_transform
-    
-    except Exception as e:
-        print(f"Error creating datasets: {e}")
-        print("Creating dummy datasets for testing...")
-        
-        # Create dummy datasets for testing
-        train_dataset = DummyDataset(size=100, transform=train_transform)
-        val_dataset = DummyDataset(size=20, transform=val_transform)
-    
-    # Create data loaders
-    train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, 
-        num_workers=num_workers, pin_memory=True
-    )
-    
-    val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False,
-        num_workers=num_workers, pin_memory=True
-    )
-    
-    return train_loader, val_loader
-
-class DummyDataset(Dataset):
-    """Dummy dataset for testing when real data is not available."""
-    
-    def __init__(self, size=100, transform=None, num_classes=2):
-        self.size = size
-        self.transform = transform
-        self.num_classes = num_classes
         
     def __len__(self):
-        return self.size
-    
+        return self.dataset.samples
+        
     def __getitem__(self, idx):
-        # Generate random image
-        image = Image.fromarray(
-            np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
-        )
-        
-        if self.transform:
-            image = self.transform(image)
-        
-        # Random label
-        label = np.random.randint(0, self.num_classes)
-        
-        return image, label, f"dummy_{idx}.jpg"
+        """Get item - returns from TensorFlow dataset."""
+        # This is a simplified version for compatibility
+        # In practice, you would iterate through the TensorFlow dataset
+        images, labels = next(iter(self.dataset))
+        if idx < len(images):
+            return images[idx], labels[idx], f"sample_{idx}"
+        else:
+            raise IndexError("Index out of range")

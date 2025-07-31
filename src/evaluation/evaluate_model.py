@@ -1,404 +1,300 @@
 """
-Model evaluation utilities
+Model evaluation utilities following notebook approach
 """
 
 import os
 import sys
-import torch
-import torch.nn.functional as F
 import numpy as np
-from torch.utils.data import DataLoader
-from tqdm import tqdm
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from tensorflow import keras
+from sklearn.metrics import confusion_matrix, classification_report, roc_curve, auc
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.models.cnn_model import create_model
-from src.utils.metrics import calculate_metrics, plot_confusion_matrix, plot_roc_curve
+from src.data.dataset import get_data_generators
 
 class ModelEvaluator:
-    """Comprehensive model evaluation."""
+    """Model evaluation following notebook approach."""
     
-    def __init__(self, model_path, model_type='resnet50', num_classes=2, device=None):
+    def __init__(self, model_path, model_type='simple', num_classes=1):
         """
         Args:
-            model_path: Path to trained model
-            model_type: Model architecture type
-            num_classes: Number of classes
-            device: Device to run evaluation on
+            model_path: Path to trained Keras model (.h5 file)
+            model_type: Model architecture type (only 'simple' supported)
+            num_classes: Number of classes (1 for binary with sigmoid)
         """
-        self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model_path = model_path
+        self.model_type = model_type
         self.num_classes = num_classes
         self.class_names = ['OK', 'Defective']
         
         # Load model
-        self.model = create_model(model_type, num_classes, pretrained=False)
-        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.model = self.model.to(self.device)
-        self.model.eval()
-        
-        print(f"Loaded model from: {model_path}")
-        print(f"Model type: {model_type}")
-        print(f"Device: {self.device}")
+        try:
+            self.model = keras.models.load_model(model_path)
+            print(f"✅ Loaded model from: {model_path}")
+            print(f"Model type: {model_type}")
+            print("Model architecture:")
+            self.model.summary()
+        except Exception as e:
+            print(f"❌ Error loading model: {e}")
+            self.model = None
     
-    def evaluate(self, dataloader, save_plots=True, save_dir='results/reports'):
+    def evaluate(self, test_dataset, threshold=0.5, save_plots=True, save_dir='results/reports'):
         """
-        Comprehensive evaluation of the model.
+        Comprehensive evaluation following notebook approach.
         
         Args:
-            dataloader: DataLoader for evaluation
-            save_plots: Whether to save evaluation plots
-            save_dir: Directory to save plots
-        
-        Returns:
-            Dictionary containing evaluation results
-        """
-        print("Starting model evaluation...")
-        
-        all_predictions = []
-        all_targets = []
-        all_probabilities = []
-        all_paths = []
-        
-        running_loss = 0.0
-        correct = 0
-        total = 0
-        
-        criterion = torch.nn.CrossEntropyLoss()
-        
-        with torch.no_grad():
-            pbar = tqdm(dataloader, desc='Evaluating')
-            for batch_idx, (data, target, paths) in enumerate(pbar):
-                data, target = data.to(self.device), target.to(self.device)
-                
-                # Forward pass
-                outputs = self.model(data)
-                loss = criterion(outputs, target)
-                
-                # Get probabilities and predictions
-                probabilities = F.softmax(outputs, dim=1)
-                _, predicted = torch.max(outputs, 1)
-                
-                # Accumulate results
-                running_loss += loss.item()
-                total += target.size(0)
-                correct += (predicted == target).sum().item()
-                
-                # Store for detailed analysis
-                all_predictions.extend(predicted.cpu().numpy())
-                all_targets.extend(target.cpu().numpy())
-                all_probabilities.extend(probabilities.cpu().numpy())
-                all_paths.extend(paths)
-                
-                # Update progress
-                pbar.set_postfix({
-                    'Loss': f'{loss.item():.4f}',
-                    'Acc': f'{100.*correct/total:.2f}%'
-                })
-        
-        # Calculate final metrics
-        avg_loss = running_loss / len(dataloader)
-        accuracy = 100. * correct / total
-        
-        print("\nEvaluation Results:")
-        print(f"Average Loss: {avg_loss:.4f}")
-        print(f"Accuracy: {accuracy:.2f}%")
-        
-        # Detailed metrics
-        prob_array = np.array(all_probabilities)
-        metrics = calculate_metrics(
-            all_targets, 
-            all_predictions, 
-            prob_array,
-            self.class_names
-        )
-        
-        # Create results dictionary
-        results = {
-            'loss': avg_loss,
-            'accuracy': accuracy,
-            'metrics': metrics,
-            'predictions': all_predictions,
-            'targets': all_targets,
-            'probabilities': all_probabilities,
-            'paths': all_paths
-        }
-        
-        # Save plots if requested
-        if save_plots:
-            os.makedirs(save_dir, exist_ok=True)
-            self._save_evaluation_plots(results, save_dir)
-        
-        return results
-    
-    def _save_evaluation_plots(self, results, save_dir):
-        """Save evaluation plots."""
-        print("Generating evaluation plots...")
-        
-        # Confusion matrix
-        cm_path = os.path.join(save_dir, 'confusion_matrix.png')
-        plot_confusion_matrix(
-            results['metrics']['confusion_matrix'],
-            class_names=self.class_names,
-            save_path=cm_path
-        )
-        
-        # Normalized confusion matrix
-        cm_norm_path = os.path.join(save_dir, 'confusion_matrix_normalized.png')
-        plot_confusion_matrix(
-            results['metrics']['confusion_matrix'],
-            class_names=self.class_names,
-            normalize=True,
-            title='Normalized Confusion Matrix',
-            save_path=cm_norm_path
-        )
-        
-        # ROC curve (if binary classification)
-        if self.num_classes == 2:
-            roc_path = os.path.join(save_dir, 'roc_curve.png')
-            plot_roc_curve(
-                results['targets'],
-                np.array(results['probabilities']),
-                class_names=self.class_names,
-                save_path=roc_path
-            )
-        
-        print(f"Evaluation plots saved to: {save_dir}")
-    
-    def evaluate_single_image(self, image_path):
-        """
-        Evaluate a single image.
-        
-        Args:
-            image_path: Path to image file
-        
-        Returns:
-            Dictionary with prediction results
-        """
-        from PIL import Image
-        from torchvision import transforms
-        
-        # Load and preprocess image
-        image = Image.open(image_path).convert('RGB')
-        
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                               std=[0.229, 0.224, 0.225])
-        ])
-        
-        image_tensor = transform(image).unsqueeze(0).to(self.device)
-        
-        # Predict
-        with torch.no_grad():
-            outputs = self.model(image_tensor)
-            probabilities = F.softmax(outputs, dim=1)
-            predicted_class = torch.argmax(outputs, dim=1)
-        
-        # Convert to numpy
-        probs = probabilities.cpu().numpy()[0]
-        pred_class = predicted_class.cpu().item()
-        
-        results = {
-            'predicted_class': pred_class,
-            'predicted_label': self.class_names[pred_class],
-            'confidence': probs[pred_class],
-            'probabilities': {
-                self.class_names[i]: probs[i] for i in range(len(self.class_names))
-            }
-        }
-        
-        return results
-    
-    def find_misclassified_samples(self, dataloader, num_samples=10):
-        """
-        Find misclassified samples for analysis.
-        
-        Args:
-            dataloader: DataLoader for evaluation
-            num_samples: Number of misclassified samples to return
-        
-        Returns:
-            List of misclassified sample information
-        """
-        misclassified = []
-        
-        with torch.no_grad():
-            for batch_idx, (data, target, paths) in enumerate(dataloader):
-                data, target = data.to(self.device), target.to(self.device)
-                
-                outputs = self.model(data)
-                probabilities = F.softmax(outputs, dim=1)
-                _, predicted = torch.max(outputs, 1)
-                
-                # Find misclassified samples in this batch
-                for i in range(data.size(0)):
-                    if predicted[i] != target[i]:
-                        misclassified.append({
-                            'path': paths[i],
-                            'true_label': self.class_names[target[i].item()],
-                            'predicted_label': self.class_names[predicted[i].item()],
-                            'confidence': probabilities[i, predicted[i]].item(),
-                            'true_class_prob': probabilities[i, target[i]].item()
-                        })
-                        
-                        if len(misclassified) >= num_samples:
-                            return misclassified
-        
-        return misclassified
-    
-    def analyze_class_performance(self, results):
-        """
-        Analyze per-class performance.
-        
-        Args:
-            results: Results from evaluate() method
-        
-        Returns:
-            Dictionary with per-class analysis
-        """
-        metrics = results['metrics']
-        
-        analysis = {}
-        
-        for i, class_name in enumerate(self.class_names):
-            class_indices = [j for j, target in enumerate(results['targets']) if target == i]
+            test_dataset: TensorFlow dataset generator
+            threshold: Classification threshold
+            save_plots: Whether to save plots
+            save_dir: Directory to save results
             
-            if class_indices:
-                class_predictions = [results['predictions'][j] for j in class_indices]
-                class_probabilities = [results['probabilities'][j][i] for j in class_indices]
-                
-                analysis[class_name] = {
-                    'num_samples': len(class_indices),
-                    'accuracy': sum(1 for pred in class_predictions if pred == i) / len(class_predictions),
-                    'precision': metrics['precision_per_class'][i],
-                    'recall': metrics['recall_per_class'][i],
-                    'f1_score': metrics['f1_per_class'][i],
-                    'avg_confidence': np.mean(class_probabilities),
-                    'min_confidence': np.min(class_probabilities),
-                    'max_confidence': np.max(class_probabilities)
-                }
-        
-        return analysis
-    
-    def generate_evaluation_report(self, results, save_path=None):
-        """
-        Generate a comprehensive evaluation report.
-        
-        Args:
-            results: Results from evaluate() method
-            save_path: Path to save the report
-        
         Returns:
-            String containing the report
+            Dictionary with evaluation results
         """
-        report = []
-        report.append("="*80)
-        report.append("QUALITY INSPECTION MODEL EVALUATION REPORT")
-        report.append("="*80)
-        report.append("")
+        if self.model is None:
+            raise ValueError("Model not loaded properly!")
+            
+        print("\n" + "="*60)
+        print("📊 MODEL EVALUATION (NOTEBOOK STYLE)")
+        print("="*60)
         
-        # Overall performance
-        report.append("OVERALL PERFORMANCE")
-        report.append("-"*40)
-        report.append(f"Test Loss:     {results['loss']:.4f}")
-        report.append(f"Test Accuracy: {results['accuracy']:.2f}%")
-        report.append(f"Precision:     {results['metrics']['precision']:.4f}")
-        report.append(f"Recall:        {results['metrics']['recall']:.4f}")
-        report.append(f"F1-Score:      {results['metrics']['f1_score']:.4f}")
+        # Create save directory
+        os.makedirs(save_dir, exist_ok=True)
         
-        if 'auc_score' in results['metrics'] and results['metrics']['auc_score'] is not None:
-            report.append(f"AUC Score:     {results['metrics']['auc_score']:.4f}")
+        # Make predictions
+        print("Making predictions on test dataset...")
+        y_pred_prob = self.model.predict(test_dataset, verbose=1)
         
-        report.append("")
+        # Convert probabilities to classes using threshold
+        y_pred_class = (y_pred_prob >= threshold).reshape(-1,)
+        y_true_class = test_dataset.classes[test_dataset.index_array]
         
-        # Per-class performance
-        analysis = self.analyze_class_performance(results)
+        # Calculate accuracy
+        accuracy = np.mean(y_true_class == y_pred_class)
         
-        report.append("PER-CLASS PERFORMANCE")
-        report.append("-"*40)
+        print(f"\n🎯 Test Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
         
-        for class_name, stats in analysis.items():
-            report.append(f"\n{class_name}:")
-            report.append(f"  Samples:      {stats['num_samples']}")
-            report.append(f"  Accuracy:     {stats['accuracy']:.4f}")
-            report.append(f"  Precision:    {stats['precision']:.4f}")
-            report.append(f"  Recall:       {stats['recall']:.4f}")
-            report.append(f"  F1-Score:     {stats['f1_score']:.4f}")
-            report.append(f"  Avg Confidence: {stats['avg_confidence']:.4f}")
+        # Create confusion matrix following notebook format
+        cm = confusion_matrix(y_true_class, y_pred_class)
+        cm_df = pd.DataFrame(
+            cm,
+            index=[["Actual", "Actual"], ["ok", "defect"]],
+            columns=[["Predicted", "Predicted"], ["ok", "defect"]]
+        )
         
-        report.append("")
+        print("\n📊 Confusion Matrix:")
+        print(cm_df)
         
-        # Confusion matrix
-        report.append("CONFUSION MATRIX")
-        report.append("-"*40)
-        cm = results['metrics']['confusion_matrix']
+        # Classification report
+        print("\n📋 Classification Report:")
+        report = classification_report(y_true_class, y_pred_class, digits=4, 
+                                     target_names=['ok', 'defect'])\n        print(report)
         
-        # Header
-        report.append(f"{'':>12}")
-        for name in self.class_names:
-            report.append(f"{name:>10}")
-        report.append("")
+        # Save confusion matrix plot
+        if save_plots:
+            self._plot_confusion_matrix(cm, save_dir)
+            self._plot_roc_curve(y_true_class, y_pred_prob, save_dir)
         
-        # Matrix
-        for i, name in enumerate(self.class_names):
-            line = f"{name:>12}"
-            for j in range(len(self.class_names)):
-                line += f"{cm[i, j]:>10}"
-            report.append(line)
+        # Analyze misclassified samples following notebook
+        misclassified_indices = np.where(y_pred_class != y_true_class)[0]
+        print(f"\n🔍 Misclassified samples: {len(misclassified_indices)} out of {len(y_true_class)}")
         
-        report.append("")
-        report.append("="*80)
+        if len(misclassified_indices) > 0 and save_plots:
+            self._visualize_misclassified(test_dataset, misclassified_indices, 
+                                        y_pred_prob, threshold, save_dir)
         
-        # Join all lines
-        report_text = "\n".join(report)
+        # Prepare results dictionary
+        results = {
+            'accuracy': float(accuracy),
+            'confusion_matrix': cm,
+            'y_true': y_true_class,
+            'y_pred': y_pred_class,
+            'y_pred_prob': y_pred_prob.flatten(),
+            'classification_report': report,
+            'misclassified_indices': misclassified_indices,
+            'threshold': threshold
+        }
         
-        # Save if requested
-        if save_path:
-            with open(save_path, 'w') as f:
-                f.write(report_text)
-            print(f"Evaluation report saved to: {save_path}")
+        # Save results to file
+        results_file = os.path.join(save_dir, 'evaluation_results.txt')
+        with open(results_file, 'w') as f:
+            f.write("MODEL EVALUATION RESULTS\\n")
+            f.write("="*50 + "\\n\\n")
+            f.write(f"Test Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)\\n\\n")
+            f.write("Confusion Matrix:\\n")
+            f.write(str(cm_df) + "\\n\\n")
+            f.write("Classification Report:\\n")
+            f.write(report + "\\n\\n")
+            f.write(f"Misclassified samples: {len(misclassified_indices)} out of {len(y_true_class)}\\n")
+            f.write(f"Classification threshold: {threshold}\\n")
         
-        # Print to console
-        print(report_text)
+        print(f"\\n💾 Results saved to: {results_file}")
         
-        return report_text
+        return results
+    
+    def _plot_confusion_matrix(self, cm, save_dir):
+        """Plot confusion matrix following notebook style."""
+        plt.figure(figsize=(8, 6))
+        
+        # Plot with seaborn heatmap
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                   xticklabels=['ok', 'defect'],
+                   yticklabels=['ok', 'defect'])
+        
+        plt.title('CONFUSION MATRIX', fontweight='bold', fontsize=16)
+        plt.xlabel('Predicted Label', fontweight='bold')
+        plt.ylabel('Actual Label', fontweight='bold')
+        
+        # Save plot
+        plot_path = os.path.join(save_dir, 'confusion_matrix.png')
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        print(f"📊 Confusion matrix saved: {plot_path}")
+        
+        # Also create normalized confusion matrix
+        cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(cm_normalized, annot=True, fmt='.2f', cmap='Blues',
+                   xticklabels=['ok', 'defect'],
+                   yticklabels=['ok', 'defect'])
+        
+        plt.title('NORMALIZED CONFUSION MATRIX', fontweight='bold', fontsize=16)
+        plt.xlabel('Predicted Label', fontweight='bold')
+        plt.ylabel('Actual Label', fontweight='bold')
+        
+        norm_plot_path = os.path.join(save_dir, 'confusion_matrix_normalized.png')
+        plt.savefig(norm_plot_path, dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        print(f"📊 Normalized confusion matrix saved: {norm_plot_path}")
+    
+    def _plot_roc_curve(self, y_true, y_pred_prob, save_dir):
+        """Plot ROC curve."""
+        # Calculate ROC curve
+        fpr, tpr, _ = roc_curve(y_true, y_pred_prob)
+        roc_auc = auc(fpr, tpr)
+        
+        plt.figure(figsize=(8, 6))
+        plt.plot(fpr, tpr, color='darkorange', lw=2, 
+                label=f'ROC curve (AUC = {roc_auc:.2f})')
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', 
+                label='Random Classifier')
+        
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate', fontweight='bold')
+        plt.ylabel('True Positive Rate', fontweight='bold')
+        plt.title('ROC CURVE', fontweight='bold', fontsize=16)
+        plt.legend(loc="lower right")
+        plt.grid(True, alpha=0.3)
+        
+        # Save plot
+        roc_path = os.path.join(save_dir, 'roc_curve.png')
+        plt.savefig(roc_path, dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        print(f"📊 ROC curve saved: {roc_path}")
+    
+    def _visualize_misclassified(self, test_dataset, misclassified_indices, 
+                               y_pred_prob, threshold, save_dir):
+        """Visualize misclassified samples following notebook approach."""
+        mapping_class = {0: "ok", 1: "defect"}
+        
+        # Get a few misclassified samples
+        num_samples = min(4, len(misclassified_indices))
+        sample_indices = misclassified_indices[:num_samples]
+        
+        # Get images from dataset
+        images, labels = next(iter(test_dataset))
+        
+        fig, axes = plt.subplots(2, 2, figsize=(8, 8))
+        axes = axes.flatten()
+        
+        for i, idx in enumerate(sample_indices):
+            if i >= len(axes):
+                break
+                
+            # Get the image at this index (approximate)
+            batch_num = idx // test_dataset.batch_size
+            image_num = idx % test_dataset.batch_size
+            
+            try:
+                batch_images, batch_labels = test_dataset[batch_num]
+                img = batch_images[image_num]
+                true_label = mapping_class[int(batch_labels[image_num])]
+                
+                # Get prediction
+                pred_prob = y_pred_prob[idx]
+                pred_label = mapping_class[int(pred_prob >= threshold)]
+                prob_class = 100 * pred_prob if pred_label == "defect" else 100 * (1 - pred_prob)
+                
+                axes[i].imshow(img.squeeze(), cmap="gray")
+                axes[i].set_title(f"TRUE LABEL: {true_label}", fontweight="bold", fontsize=14)
+                axes[i].set_xlabel(
+                    f"PREDICTED LABEL: {pred_label}\\nProb({pred_label}) = {prob_class:.2f}%",
+                    fontweight="bold", fontsize=12, color="red"
+                )
+                axes[i].set_xticks([])
+                axes[i].set_yticks([])
+                
+            except Exception as e:
+                print(f"Error visualizing sample {idx}: {e}")
+                axes[i].axis('off')
+        
+        # Hide unused subplots
+        for i in range(num_samples, len(axes)):
+            axes[i].axis('off')
+        
+        plt.tight_layout()
+        fig.suptitle(
+            f"MISCLASSIFIED TEST IMAGES ({len(misclassified_indices)} total)",
+            size=16, y=1.03, fontweight="bold"
+        )
+        
+        # Save visualization
+        misc_path = os.path.join(save_dir, 'misclassified_samples.png')
+        plt.savefig(misc_path, dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        print(f"📊 Misclassified samples visualization saved: {misc_path}")
 
-def main():
-    """Example usage of model evaluator."""
-    import argparse
+def evaluate_model_notebook_style(model_path, data_dir, config):
+    """
+    Evaluate model following notebook approach.
     
-    parser = argparse.ArgumentParser(description='Evaluate trained model')
-    parser.add_argument('--model-path', required=True, help='Path to trained model')
-    parser.add_argument('--data-dir', required=True, help='Path to test data')
-    parser.add_argument('--model-type', default='resnet50', help='Model architecture')
-    parser.add_argument('--batch-size', type=int, default=32, help='Batch size')
-    parser.add_argument('--save-dir', default='results/reports', help='Save directory')
-    
-    args = parser.parse_args()
-    
-    # Load test data
-    from src.data.dataset import QualityInspectionDataset
-    
-    test_dataset = QualityInspectionDataset(args.data_dir, split='test')
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
-    
-    # Initialize evaluator
+    Args:
+        model_path: Path to trained model (.h5 file)
+        data_dir: Path to data directory
+        config: Configuration dictionary
+        
+    Returns:
+        Evaluation results
+    """
+    # Create evaluator
     evaluator = ModelEvaluator(
-        model_path=args.model_path,
-        model_type=args.model_type
+        model_path=model_path,
+        model_type=config.get('model_type', 'simple'),
+        num_classes=config.get('num_classes', 1)
     )
     
+    # Load test data
+    try:
+        _, _, test_dataset = get_data_generators(
+            data_dir=data_dir,
+            batch_size=config.get('batch_size', 64)
+        )
+        print(f"✅ Test dataset loaded: {test_dataset.samples} samples")
+    except Exception as e:
+        print(f"❌ Error loading test data: {e}")
+        return None
+    
     # Evaluate
-    results = evaluator.evaluate(test_loader, save_dir=args.save_dir)
+    results = evaluator.evaluate(test_dataset, threshold=0.5)
     
-    # Generate report
-    report_path = os.path.join(args.save_dir, 'evaluation_report.txt')
-    evaluator.generate_evaluation_report(results, save_path=report_path)
-    
-    print("Evaluation completed!")
-
-if __name__ == "__main__":
-    main()
+    return results

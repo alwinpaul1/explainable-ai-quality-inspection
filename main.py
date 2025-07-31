@@ -7,17 +7,16 @@ import os
 import sys
 import argparse
 
-import torch
-from torch.utils.data import DataLoader
+import tensorflow as tf
+from tensorflow import keras
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.data.dataset import get_data_loaders, QualityInspectionDataset
-from src.training.train_model import QualityInspectionTrainer
+from src.data.dataset import get_data_generators, QualityInspectionDataset
+from src.training.train_model import train_model_notebook_style, QualityInspectionTrainer
 from src.explainability.explain_model import ModelExplainer
 from src.evaluation.evaluate_model import ModelEvaluator
-from src.utils.metrics import print_metrics_summary
 
 def setup_directories():
     """Create necessary directories."""
@@ -223,102 +222,40 @@ def create_dummy_dataset(data_dir='data'):
     return True
 
 def train_model(config):
-    """Train the quality inspection model with optimizations."""
-    print("\n" + "="*60)
-    print("🚀 OPTIMIZED TRAINING PHASE")
-    print("="*60)
-    
-    # Show improvements summary
-    print("\n🎯 IMPLEMENTED FIXES:")
-    print("-" * 50)
-    print("✅ Fixed MPS/GPU device selection")
-    print("✅ Updated deprecated 'pretrained' parameter")
-    print("✅ Enhanced data augmentation with more techniques")
-    print("✅ Added early stopping to prevent overfitting")
-    print("✅ Improved learning rate scheduling with warmup")
-    print("✅ Proper regularization (dropout + weight decay)")
-    print("✅ Fixed precision warnings in metrics")
-    print("✅ Non-blocking data transfer for performance")
-    print("-" * 50)
-    
-    # Create data loaders
-    try:
-        train_loader, val_loader = get_data_loaders(
-            config['data_dir'],
-            batch_size=config['batch_size'],
-            num_workers=config.get('num_workers', 4)
-        )
-        print(f"Training samples: {len(train_loader.dataset)}")
-        print(f"Validation samples: {len(val_loader.dataset)}")
-    except Exception as e:
-        print(f"Error creating data loaders: {e}")
-        print("Using dummy dataset for demonstration...")
-        
-        from src.data.dataset import DummyDataset
-        from torchvision import transforms
-        
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                               std=[0.229, 0.224, 0.225])
-        ])
-        
-        train_dataset = DummyDataset(size=1000, transform=transform)
-        val_dataset = DummyDataset(size=200, transform=transform)
-        
-        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-    
-    # Initialize trainer
-    trainer = QualityInspectionTrainer(config)
-    
-    # Start training with all improvements
-    print("\n🚀 Starting Optimized Training...")
-    best_model_path = trainer.train(train_loader, val_loader)
-    
-    # Show results summary
-    print("\n🎉 OPTIMIZED TRAINING COMPLETED!")
-    print("=" * 60)
-    print(f"📁 Best model saved: {best_model_path}")
-    print(f"📈 Best validation accuracy: {trainer.best_val_acc:.2f}%")
-    
-    if hasattr(trainer, 'early_stopping_triggered') and trainer.early_stopping_triggered:
-        print("✅ Early stopping prevented overfitting")
-    
-    print(f"📊 Training history saved: {config['log_dir']}/training_history.json")
-    print(f"📈 Training curves saved: {config['log_dir']}/training_curves.png")
-    
-    return best_model_path
+    """Train the quality inspection model following notebook approach."""
+    return train_model_notebook_style(config)
 
 def evaluate_model(model_path, data_dir, config):
-    """Evaluate the trained model."""
+    """Evaluate the trained model using TensorFlow/Keras."""
     print("\n" + "="*60)
-    print("EVALUATION PHASE")
+    print("EVALUATION PHASE (NOTEBOOK STYLE)")
     print("="*60)
     
-    # Create evaluator
-    evaluator = ModelEvaluator(
-        model_path=model_path,
-        model_type=config['model_type'],
-        num_classes=config['num_classes']
-    )
-    
-    # Load test data
+    # Load the trained model
     try:
-        test_dataset = QualityInspectionDataset(
-            data_dir, split='test'
+        model = keras.models.load_model(model_path)
+        print(f"✅ Model loaded from: {model_path}")
+    except Exception as e:
+        print(f"❌ Error loading model: {e}")
+        return None
+    
+    # Create test data generator
+    try:
+        _, _, test_dataset = get_data_generators(
+            data_dir=data_dir,
+            batch_size=config.get('batch_size', 64)
         )
-        test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-    except (FileNotFoundError, OSError):
-        # Use validation data if test not available
-        _, test_loader = get_data_loaders(data_dir, batch_size=32)
+        print(f"✅ Test dataset loaded: {test_dataset.samples} samples")
+    except Exception as e:
+        print(f"❌ Error loading test data: {e}")
+        return None
     
-    # Evaluate
-    results = evaluator.evaluate(test_loader)
+    # Create trainer instance for evaluation
+    trainer = QualityInspectionTrainer(config)
+    trainer.model = model  # Use the loaded model
     
-    # Print results
-    print_metrics_summary(results['metrics'], class_names=['OK', 'Defective'])
+    # Evaluate on test dataset
+    results = trainer.evaluate_on_test(test_dataset, threshold=0.5)
     
     return results
 
@@ -449,31 +386,27 @@ def main():
                        help='Create dummy dataset for testing')
     
     # Model arguments
-    parser.add_argument('--model-type', default='resnet50',
-                       choices=['resnet50', 'efficientnet', 'vgg16', 'simple'],
-                       help='Model architecture')
+    parser.add_argument('--model-type', default='simple',
+                       choices=['simple'],  # Only simple CNN following notebook
+                       help='Model architecture (only simple CNN supported)')
     parser.add_argument('--model-path', 
                        help='Path to pre-trained model (for evaluation/explanation)')
     parser.add_argument('--num-classes', type=int, default=2,
                        help='Number of classes')
     
-    # Training arguments (optimized defaults)
-    parser.add_argument('--epochs', type=int, default=30,
-                       help='Number of training epochs')
-    parser.add_argument('--batch-size', type=int, default=16,
-                       help='Batch size (smaller for better generalization)')
-    parser.add_argument('--learning-rate', type=float, default=0.0001,
-                       help='Learning rate (lower for stability)')
-    parser.add_argument('--weight-decay', type=float, default=0.01,
-                       help='Weight decay (increased regularization)')
+    # Training arguments (following notebook)
+    parser.add_argument('--epochs', type=int, default=25,
+                       help='Number of training epochs (notebook default: 25)')
+    parser.add_argument('--batch-size', type=int, default=64,
+                       help='Batch size (notebook default: 64)')
+    parser.add_argument('--steps-per-epoch', type=int, default=150,
+                       help='Steps per epoch (notebook default: 150)')
+    parser.add_argument('--validation-steps', type=int, default=150,
+                       help='Validation steps (notebook default: 150)')
     parser.add_argument('--optimizer', default='adam',
-                       choices=['adam', 'sgd'],
-                       help='Optimizer')
-    parser.add_argument('--scheduler', default='warmup_cosine',
-                       choices=['plateau', 'cosine', 'warmup_cosine', 'none'],
-                       help='Learning rate scheduler (warmup_cosine recommended)')
-    parser.add_argument('--early-stopping-patience', type=int, default=10,
-                       help='Early stopping patience (epochs without improvement)')
+                       help='Optimizer (notebook uses adam)')
+    parser.add_argument('--image-size', type=int, default=300,
+                       help='Image size (notebook uses 300x300)')
     
     # Output arguments
     parser.add_argument('--save-dir', default='results/models',
@@ -486,14 +419,14 @@ def main():
                        help='Number of samples to explain')
     
     # System arguments
-    parser.add_argument('--num-workers', type=int, default=2,
-                       help='Number of data loading workers (reduced for stability)')
     parser.add_argument('--gpu', action='store_true',
-                       help='Use GPU if available')
+                       help='Use GPU if available (TensorFlow will auto-detect)')
+    parser.add_argument('--seed', type=int, default=123,
+                       help='Random seed for reproducibility (notebook uses 123)')
     
     args = parser.parse_args()
     
-    # Create configuration
+    # Create configuration following notebook approach
     config = {
         'mode': args.mode,
         'data_dir': args.data_dir,
@@ -501,20 +434,18 @@ def main():
         'create_dummy': args.create_dummy,
         'model_type': args.model_type,
         'model_path': args.model_path,
-        'num_classes': args.num_classes,
+        'num_classes': 1,  # Binary classification with sigmoid
         'epochs': args.epochs,
         'batch_size': args.batch_size,
-        'learning_rate': args.learning_rate,
-        'weight_decay': args.weight_decay,
+        'steps_per_epoch': args.steps_per_epoch,
+        'validation_steps': args.validation_steps,
         'optimizer': args.optimizer,
-        'scheduler': args.scheduler if args.scheduler != 'none' else None,
         'save_dir': args.save_dir,
         'log_dir': args.log_dir,
         'num_explanation_samples': args.num_explanation_samples,
-        'num_workers': args.num_workers,
-        'pretrained': True,
-        'save_frequency': 10,
-        'early_stopping_patience': args.early_stopping_patience
+        'image_size': (args.image_size, args.image_size),
+        'seed': args.seed,
+        'use_gpu': args.gpu
     }
     
     # Set training/evaluation/explanation flags based on mode
@@ -535,15 +466,28 @@ def main():
             print(f"{key}: {value}")
     print("-" * 40)
     
-    # Check GPU availability
-    if args.gpu and torch.cuda.is_available():
-        print(f"GPU available: {torch.cuda.get_device_name(0)}")
-    elif args.gpu:
-        print("GPU requested but not available. Using CPU.")
+    # Configure TensorFlow GPU usage
+    if args.gpu:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            try:
+                # Enable memory growth for GPU
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+                print(f"GPU available: {len(gpus)} GPU(s) detected")
+            except RuntimeError as e:
+                print(f"GPU configuration error: {e}")
+        else:
+            print("GPU requested but not available. Using CPU.")
     else:
-        print("Using CPU")
+        print("Using CPU (following notebook approach)")
     
-    # Run pipeline
+    # Set random seeds for reproducibility (following notebook)
+    tf.random.set_seed(config['seed'])
+    import numpy as np
+    np.random.seed(config['seed'])
+    
+    # Run pipeline with notebook approach
     run_complete_pipeline(config)
 
 if __name__ == "__main__":
