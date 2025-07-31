@@ -163,63 +163,6 @@ def install_kaggle_api():
         print(f"❌ Failed to install Kaggle API: {e}")
         return False
 
-def create_dummy_dataset(data_dir='data'):
-    """Create a dummy dataset for testing when real data is not available."""
-    import numpy as np
-    from PIL import Image
-    from pathlib import Path
-    
-    print("🎯 Creating dummy dataset for testing...")
-    
-    data_path = Path(data_dir)
-    
-    # Create directory structure
-    dirs = [
-        data_path / 'train' / 'ok',
-        data_path / 'train' / 'defective',
-        data_path / 'val' / 'ok',
-        data_path / 'val' / 'defective',
-        data_path / 'test' / 'ok',
-        data_path / 'test' / 'defective'
-    ]
-    
-    for dir_path in dirs:
-        dir_path.mkdir(parents=True, exist_ok=True)
-    
-    # Generate dummy images
-    np.random.seed(42)  # For reproducible dummy data
-    
-    splits = {
-        'train': {'ok': 100, 'defective': 100},
-        'val': {'ok': 20, 'defective': 20},
-        'test': {'ok': 30, 'defective': 30}
-    }
-    
-    for split, classes in splits.items():
-        for class_name, count in classes.items():
-            class_dir = data_path / split / class_name
-            
-            for i in range(count):
-                # Create dummy image
-                if class_name == 'ok':
-                    # Mostly uniform gray image (simulating good product)
-                    img_array = np.random.randint(100, 150, (224, 224, 3), dtype=np.uint8)
-                else:
-                    # Add some "defects" - darker spots and noise
-                    img_array = np.random.randint(80, 120, (224, 224, 3), dtype=np.uint8)
-                    # Add random dark spots (simulating defects)
-                    for _ in range(np.random.randint(3, 8)):
-                        x, y = np.random.randint(0, 200, 2)
-                        img_array[x:x+24, y:y+24] = np.random.randint(20, 60, (24, 24, 3))
-                
-                # Save image
-                img = Image.fromarray(img_array)
-                img_path = class_dir / f'{class_name}_{i:04d}.jpg'
-                img.save(img_path)
-    
-    print(f"✅ Created dummy dataset with {sum(sum(classes.values()) for classes in splits.values())} images")
-    print(f"   Structure: {data_dir}/{{train,val,test}}/{{ok,defective}}/")
-    return True
 
 def train_model(config):
     """Train the quality inspection model following notebook approach."""
@@ -382,8 +325,6 @@ def main():
                        help='Path to dataset directory')
     parser.add_argument('--download-data', action='store_true',
                        help='Download casting dataset before training')
-    parser.add_argument('--create-dummy', action='store_true',
-                       help='Create dummy dataset for testing')
     
     # Model arguments (TensorFlow/Keras only)
     parser.add_argument('--model-path', 
@@ -428,7 +369,6 @@ def main():
         'mode': args.mode,
         'data_dir': args.data_dir,
         'download_data': args.download_data,
-        'create_dummy': args.create_dummy,
         'model_type': 'simple',  # Fixed to simple CNN following notebook
         'model_path': args.model_path,
         'num_classes': 1,  # Binary classification with sigmoid
