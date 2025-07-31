@@ -136,44 +136,59 @@ data/
 - **Color Channels**: RGB (3-channel)
 
 **Important Notes**:
-- **Automatic Dataset Download**: The system now includes built-in dataset download functionality
-- **Kaggle API Support**: For the casting dataset, install `kaggle` package and configure API token
-- **Smart Fallback**: If download fails or no dataset exists, the system automatically creates dummy datasets for testing
-- **Dummy Dataset**: Use `--create-dummy` to explicitly create test data with 370 synthetic images
-- For production use, manually place your real dataset under `data/` as shown above
+- **Real Dataset Required**: This system is designed for the actual casting product dataset
+- **Kaggle API Setup Required**: Install `kaggle` package and configure API token for automatic download
+- **No Dummy Data**: The system requires real industrial data for meaningful results
+- **Dataset Verification**: Automatic verification ensures correct dataset structure after download
+- For manual setup, place your real dataset under `data/` as shown above
 
 ## 🚀 Quick Start
 
-### Option 1: Complete Pipeline with Dummy Data
+### Prerequisites: Kaggle API Setup
+```bash
+# 1. Install Kaggle API
+pip install kaggle
+
+# 2. Get API credentials from kaggle.com/account
+# Download kaggle.json and place in ~/.kaggle/ (Linux/Mac) or C:\Users\{username}\.kaggle\ (Windows)
+
+# 3. Set permissions (Linux/Mac only)
+chmod 600 ~/.kaggle/kaggle.json
+```
+
+### Option 1: Automatic Download & Complete Pipeline
 ```bash
 # Activate environment
 source venv/bin/activate
 
-# Create dummy dataset and run full pipeline
-python main.py --mode full --create-dummy --epochs 10 --batch-size 8
-
-# Launch interactive dashboard
-streamlit run dashboard/app.py
-```
-
-### Option 2: Download Real Data (Kaggle API Required)
-```bash
-# Install and configure Kaggle API first:
-# pip install kaggle
-# Set up API token from kaggle.com/account
-
-# Download dataset and run pipeline
+# Download real casting dataset and run full pipeline
 python main.py --mode full --download-data --dataset-name casting --epochs 30
 
 # Launch interactive dashboard
 streamlit run dashboard/app.py
 ```
 
-### Option 3: Step-by-Step with Custom Data
+### Option 2: Manual Dataset Setup
 ```bash
-# 1. Place your data in data/train/{ok,defective}/ and data/val/{ok,defective}/
+# 1. Download dataset manually from:
+# https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product
 
-# 2. Train model with early stopping
+# 2. Extract and place in data/ directory with structure:
+# data/train/{ok,defective}/ and data/test/{ok,defective}/
+
+# 3. Run pipeline without download flag
+python main.py --mode full --epochs 30
+
+# 4. Launch dashboard
+streamlit run dashboard/app.py
+```
+
+### Option 3: Step-by-Step Training
+```bash
+# 1. Download dataset first
+python main.py --mode train --download-data --epochs 1  # Just to download
+
+# 2. Train model with optimal settings
 python main.py --mode train --epochs 50 --early-stopping-patience 10
 
 # 3. Evaluate trained model
