@@ -54,10 +54,8 @@ explainable-ai-quality-inspection/
 │       ├── metrics.py        # Metric calculations (fixed warnings)
 │       └── visualization.py  # Visualization utilities
 ├── 📁 tests/                  # Unit tests
-├── main.py                   # Main execution script
-├── run_improved_training.py  # Improved training script with all fixes
+├── main.py                   # Main execution script with optimized training
 ├── requirements.txt          # Python dependencies
-├── TRAINING_FIXES_SUMMARY.md # Documentation of training improvements
 └── README.md                # This file
 ```
 
@@ -101,26 +99,20 @@ python scripts/download_dataset.py --dataset neu --data-dir data
 
 ### 3. Training
 
-#### 🔥 Improved Training (Recommended)
+#### 🔥 Optimized Training (Default)
 ```bash
-# Use the optimized training script with all fixes
-python run_improved_training.py
+# Train with optimized defaults (includes all fixes)
+python main.py --mode train
 
-# This script includes:
+# This includes:
 # ✅ Fixed overfitting issues
 # ✅ Proper GPU/MPS acceleration  
 # ✅ Enhanced data augmentation
 # ✅ Early stopping
 # ✅ Better learning rate scheduling
-```
-
-#### Quick Training
-```bash
-# Train with default settings (ResNet50, 30 epochs)
-python main.py --mode train --epochs 30 --batch-size 16
 
 # Train with specific architecture
-python main.py --mode train --model-type efficientnet --epochs 50 --learning-rate 0.0001
+python main.py --mode train --model-type efficientnet --epochs 50
 ```
 
 #### Advanced Training Options
