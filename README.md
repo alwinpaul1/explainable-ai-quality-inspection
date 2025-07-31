@@ -137,24 +137,12 @@ data/
 
 **Important Notes**:
 - **Real Dataset Required**: This system is designed for the actual casting product dataset
-- **Kaggle API Setup Required**: Install `kaggle` package and configure API token for automatic download
+- **Direct Download**: Automatic download from public source (no API tokens required)
 - **No Dummy Data**: The system requires real industrial data for meaningful results
 - **Dataset Verification**: Automatic verification ensures correct dataset structure after download
 - For manual setup, place your real dataset under `data/` as shown above
 
 ## 🚀 Quick Start
-
-### Prerequisites: Kaggle API Setup
-```bash
-# 1. Install Kaggle API
-pip install kaggle
-
-# 2. Get API credentials from kaggle.com/account
-# Download kaggle.json and place in ~/.kaggle/ (Linux/Mac) or C:\Users\{username}\.kaggle\ (Windows)
-
-# 3. Set permissions (Linux/Mac only)
-chmod 600 ~/.kaggle/kaggle.json
-```
 
 ### Option 1: Automatic Download & Complete Pipeline
 ```bash
@@ -162,7 +150,7 @@ chmod 600 ~/.kaggle/kaggle.json
 source venv/bin/activate
 
 # Download real casting dataset and run full pipeline
-python main.py --mode full --download-data --dataset-name casting --epochs 30
+python main.py --mode full --download-data --epochs 30
 
 # Launch interactive dashboard
 streamlit run dashboard/app.py
@@ -185,19 +173,16 @@ streamlit run dashboard/app.py
 
 ### Option 3: Step-by-Step Training
 ```bash
-# 1. Download dataset first
-python main.py --mode train --download-data --epochs 1  # Just to download
-
-# 2. Train model with optimal settings
+# 1. Train model with optimal settings
 python main.py --mode train --epochs 50 --early-stopping-patience 10
 
-# 3. Evaluate trained model
+# 2. Evaluate trained model
 python main.py --mode evaluate --model-path results/models/best_model.pth
 
-# 4. Generate explanations
+# 3. Generate explanations
 python main.py --mode explain --model-path results/models/best_model.pth --num-explanation-samples 10
 
-# 5. Launch dashboard
+# 4. Launch dashboard
 streamlit run dashboard/app.py
 ```
 
@@ -221,9 +206,8 @@ python main.py [--mode MODE] [OPTIONS]
 #### Data & Model Options
 ```bash
 --data-dir DATA_DIR           # Dataset directory (default: data)
---download-data               # Download dataset before training (requires Kaggle API for some datasets)
+--download-data               # Download casting dataset before training
 --create-dummy                # Create dummy dataset for testing
---dataset-name {casting,mvtec,neu}  # Dataset to download (default: casting)
 --model-type {resnet50,efficientnet,vgg16,simple}  # Architecture (default: resnet50)
 --model-path MODEL_PATH       # Path to saved model (for eval/explain)
 --num-classes NUM_CLASSES     # Number of classes (default: 2)
