@@ -26,17 +26,20 @@ class QualityInspectionCNN(nn.Module):
         
         # Initialize backbone
         if backbone == 'resnet50':
-            self.backbone = models.resnet50(pretrained=pretrained)
+            weights = models.ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
+            self.backbone = models.resnet50(weights=weights)
             self.feature_dim = self.backbone.fc.in_features
             self.backbone.fc = nn.Identity()  # Remove final layer
             
         elif backbone == 'efficientnet':
-            self.backbone = models.efficientnet_b0(pretrained=pretrained)
+            weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
+            self.backbone = models.efficientnet_b0(weights=weights)
             self.feature_dim = self.backbone.classifier[1].in_features
             self.backbone.classifier = nn.Identity()
             
         elif backbone == 'vgg16':
-            self.backbone = models.vgg16(pretrained=pretrained)
+            weights = models.VGG16_Weights.IMAGENET1K_V1 if pretrained else None
+            self.backbone = models.vgg16(weights=weights)
             self.feature_dim = self.backbone.classifier[6].in_features
             self.backbone.classifier[6] = nn.Identity()
             
