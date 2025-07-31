@@ -55,6 +55,7 @@ results/logs/*.json
 
 # Jupyter
 .ipynb_checkpoints/
+*.ipynb
 
 # PyTorch
 *.pth
