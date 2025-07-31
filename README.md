@@ -243,5 +243,3 @@ Generates heat maps showing where the model focuses its attention when making pr
 
 ### Integrated Gradients
 Provides pixel-level attribution scores showing the contribution of each pixel to the final prediction.
-
-# Repository cleaned of co-authorship
