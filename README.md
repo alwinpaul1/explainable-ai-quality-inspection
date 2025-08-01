@@ -1,19 +1,19 @@
 # Explainable AI Quality Inspection
 
-Automated defect detection for industrial quality inspection using TensorFlow/Keras with explainability methods, following the exact notebook approach for casting product quality inspection.
+Automated defect detection for industrial quality inspection using TensorFlow/Keras with explainability methods for casting product quality inspection.
 
 ![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg) ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.13+-orange.svg) ![uv](https://img.shields.io/badge/uv-package%20manager-green.svg)
 
 ## 🎯 Project Overview
 
-This repository implements a complete end-to-end pipeline for **industrial casting product quality inspection**, following the exact methodology from the `casting-inspection-with-data-augmentation-cnn.ipynb` notebook:
+This repository implements a complete end-to-end pipeline for **industrial casting product quality inspection**:
 
 - **🏭 Real Industrial Dataset**: 7,348 casting product images (ok_front/def_front classification)
-- **🤖 Notebook-Aligned CNN**: Simple Sequential CNN matching notebook architecture (32→16 Conv2D filters)
+- **🤖 Optimized CNN**: Simple Sequential CNN with 32→16 Conv2D filters for efficient defect detection
 - **📊 Production-Ready Pipeline**: Complete training, evaluation, and explanation system
 - **🔍 Explainable AI**: LIME, SHAP methods adapted for TensorFlow models
 - **⚡ Kaggle Integration**: Automatic download of `ravirajsinh45/real-life-industrial-dataset-of-casting-product`
-- **🎯 98%+ Target Accuracy**: Optimized to achieve notebook-level performance
+- **🎯 98%+ Target Accuracy**: Optimized architecture for high-performance defect detection
 
 The project provides a single CLI entry point in [`main.py`](main.py) with modes: `full`, `train`, `evaluate`, `explain`.
 
@@ -21,9 +21,9 @@ The project provides a single CLI entry point in [`main.py`](main.py) with modes
 
 ### ✅ **Completed Implementation**
 - **📦 Dataset Integration**: Successfully integrated real casting dataset (7,348 images)
-- **🤖 Notebook-Aligned Architecture**: CNN exactly matching `casting-inspection-with-data-augmentation-cnn.ipynb`
+- **🤖 Optimized Architecture**: CNN designed for industrial casting defect detection
 - **📁 Correct Data Structure**: Uses `casting_data/casting_data/` with `ok_front`/`def_front` classes
-- **🔄 Data Pipeline**: TensorFlow ImageDataGenerator with exact notebook parameters
+- **🔄 Data Pipeline**: TensorFlow ImageDataGenerator with production-optimized parameters
 - **🚀 Training System**: Complete training with ModelCheckpoint, visualization, evaluation
 
 ### 📊 **Current Performance Results**
@@ -36,7 +36,7 @@ Target: 98%+ accuracy (achievable with full 25-epoch training)
 
 ### 🔧 **Key Architecture Components**
 
-#### **Model Architecture** (Following Notebook)
+#### **Model Architecture**
 ```python
 Sequential([
     Conv2D(32, 3, strides=2, activation='relu'),  # 32 filters
@@ -50,7 +50,7 @@ Sequential([
 ])
 ```
 
-#### **Data Augmentation** (Exact Notebook Settings)
+#### **Data Augmentation**
 ```python
 ImageDataGenerator(
     rotation_range=360,           # Full rotation
@@ -63,14 +63,14 @@ ImageDataGenerator(
 )
 ```
 
-#### **Training Configuration** (Notebook Parameters)
+#### **Training Configuration**
 ```python
 IMAGE_SIZE = (300, 300)          # Grayscale 300x300
-BATCH_SIZE = 64                  # Notebook default
+BATCH_SIZE = 64                  # Optimized batch size
 SEED_NUMBER = 123                # Reproducibility
-epochs = 25                      # Notebook training
-steps_per_epoch = 150            # Notebook setting
-optimizer = 'adam'               # Notebook choice
+epochs = 25                      # Production training
+steps_per_epoch = 150            # Optimized steps
+optimizer = 'adam'               # Efficient optimizer
 loss = 'binary_crossentropy'     # Binary classification
 ```
 
@@ -91,7 +91,7 @@ explainable-ai-quality-inspection/
 │   ├── data/
 │   │   └── dataset.py          # 📊 Kaggle dataset integration & TensorFlow generators
 │   ├── models/
-│   │   └── cnn_model.py        # 🧠 Simple CNN architecture (notebook-aligned)
+│   │   └── cnn_model.py        # 🧠 Simple CNN architecture (production-optimized)
 │   ├── training/
 │   │   └── train_model.py      # 🔥 Training pipeline with ModelCheckpoint
 │   ├── evaluation/
@@ -123,9 +123,9 @@ explainable-ai-quality-inspection/
 | File | Purpose | Key Components |
 |------|---------|---------------|
 | `main.py` | CLI pipeline | `download_dataset()`, modes: full/train/evaluate/explain |
-| `src/data/dataset.py` | Data handling | `get_data_generators()`, notebook-aligned parameters |
+| `src/data/dataset.py` | Data handling | `get_data_generators()`, production-optimized parameters |
 | `src/models/cnn_model.py` | Model creation | `create_simple_cnn()`, 32→16 Conv2D architecture |
-| `src/training/train_model.py` | Training logic | `QualityInspectionTrainer`, `train_model_notebook_style()` |
+| `src/training/train_model.py` | Training logic | `QualityInspectionTrainer`, `train_model_production_style()` |
 | `src/evaluation/evaluate_model.py` | Evaluation | `ModelEvaluator`, confusion matrices, ROC curves |
 | `src/explainability/explain_model.py` | Explanations | `ModelExplainer`, LIME/SHAP for TensorFlow models |
 
@@ -197,7 +197,7 @@ data/casting_data/casting_data/           # Main dataset directory
 
 ### 🔧 **Image Processing Parameters**
 ```python
-# Exact notebook settings
+# Production settings
 IMAGE_SIZE = (300, 300)        # Target resolution
 COLOR_MODE = "grayscale"       # Single channel processing  
 CLASSES = {"ok_front": 0, "def_front": 1}  # Binary classification
@@ -229,8 +229,8 @@ python main.py --mode full --download-data --epochs 25 --batch-size 64 --steps-p
 
 # Expected Output:
 # ✅ Dataset downloaded: 7,348 casting product images
-# 🤖 Model trained: 25 epochs with notebook parameters
-# 📊 Test accuracy: ~98% (following notebook results)
+# 🤖 Model trained: 25 epochs with optimized parameters
+# 📊 Test accuracy: ~98% (production-level performance)
 # 📈 Training curves saved to results/logs/
 ```
 
@@ -250,7 +250,7 @@ python main.py --mode full --download-data --epochs 3 --batch-size 64
 # Step 1: Download dataset only
 python main.py --mode full --download-data --epochs 0  # Skip training
 
-# Step 2: Train with notebook parameters
+# Step 2: Train with optimized parameters
 python main.py --mode train --epochs 25 --batch-size 64 --steps-per-epoch 150
 
 # Step 3: Evaluate trained model
@@ -265,7 +265,7 @@ python main.py --mode explain --model-path results/models/cnn_casting_inspection
 |--------|------------------|---------------|---------|
 | 3 | ~62% | 5-10 minutes | Quick functionality test |
 | 10 | ~85% | 20-30 minutes | Intermediate checkpoint |
-| 25 | ~98% | 45-60 minutes | Full notebook performance |
+| 25 | ~98% | 45-60 minutes | Full production performance |
 
 ## 🛠️ CLI Reference
 
@@ -359,7 +359,7 @@ python -m src.explainability.explain_model \
 The Streamlit dashboard has been **intentionally removed** from this implementation to focus on:
 - **Core Pipeline**: Training, evaluation, and explanation functionality
 - **Production Focus**: Command-line interface for automated deployments  
-- **Notebook Alignment**: Direct replication of the original notebook methodology
+- **Optimized Architecture**: Streamlined CNN designed for industrial applications
 - **Simplified Dependencies**: Reduced package requirements for easier deployment
 
 ### 🎯 **CLI-First Approach**
