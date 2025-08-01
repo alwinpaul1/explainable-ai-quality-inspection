@@ -1,5 +1,5 @@
 """
-Training script for quality inspection model following notebook approach
+Training script for quality inspection model
 """
 
 import os
@@ -20,7 +20,7 @@ from src.data.dataset import get_data_generators, analyze_data_distribution
 from src.models.cnn_model import create_simple_cnn
 
 class QualityInspectionTrainer:
-    """Trainer class for quality inspection models following notebook approach."""
+    """Trainer class for quality inspection models."""
     
     def __init__(self, config):
         self.config = config
@@ -29,13 +29,13 @@ class QualityInspectionTrainer:
         os.makedirs(config['save_dir'], exist_ok=True)
         os.makedirs(config['log_dir'], exist_ok=True)
         
-        # Initialize model following notebook architecture
+        # Initialize model architecture
         self.model = create_simple_cnn(
-            input_shape=(300, 300, 1),  # Grayscale following notebook
+            input_shape=(300, 300, 1),  # Grayscale images
             num_classes=1  # Binary classification with sigmoid
         )
         
-        # Compile model following notebook approach
+        # Compile model
         self.model.compile(
             optimizer='adam',
             loss='binary_crossentropy',
@@ -51,7 +51,7 @@ class QualityInspectionTrainer:
         
     def train(self, train_dataset, validation_dataset):
         """
-        Train the model following notebook approach.
+        Train the model.
         
         Args:
             train_dataset: Training dataset generator
@@ -61,10 +61,10 @@ class QualityInspectionTrainer:
             Path to saved best model
         """
         print("\n" + "="*60)
-        print("🚀 TRAINING PHASE (Following Notebook Approach)")
+        print("🚀 TRAINING PHASE")
         print("="*60)
         
-        # Training parameters following notebook
+        # Training parameters
         epochs = self.config.get('epochs', 25)
         steps_per_epoch = self.config.get('steps_per_epoch', 150)
         validation_steps = self.config.get('validation_steps', 150)
@@ -75,7 +75,7 @@ class QualityInspectionTrainer:
         print(f"- Validation steps: {validation_steps}")
         print(f"- Images per epoch: {steps_per_epoch * train_dataset.batch_size}")
         
-        # Setup model checkpoint following notebook
+        # Setup model checkpoint
         model_path = os.path.join(self.config['save_dir'], 'cnn_casting_inspection_model.hdf5')
         checkpoint = ModelCheckpoint(
             model_path,
@@ -105,7 +105,7 @@ class QualityInspectionTrainer:
                 history_dict[key] = [float(v) for v in values]
             json.dump(history_dict, f, indent=2)
         
-        # Plot training curves following notebook style
+        # Plot training curves
         self._plot_training_curves()
         
         # Get best validation accuracy
@@ -118,11 +118,11 @@ class QualityInspectionTrainer:
         return model_path
     
     def _plot_training_curves(self):
-        """Plot training curves following notebook style."""
+        """Plot training curves."""
         if self.history is None:
             return
             
-        # Create training evaluation plot following notebook
+        # Create training evaluation plot
         plt.figure(figsize=(8, 6))
         
         # Convert history to DataFrame for seaborn
@@ -131,13 +131,13 @@ class QualityInspectionTrainer:
             index=range(1, 1 + len(self.history.epoch))
         )
         
-        # Plot with seaborn following notebook style
+        # Plot with seaborn styling
         sns.lineplot(data=history_df)
         plt.title("TRAINING EVALUATION", fontweight="bold", fontsize=20)
         plt.xlabel("Epochs")
         plt.ylabel("Metrics")
         
-        # Update legend labels to match notebook
+        # Update legend labels
         plt.legend(labels=['val loss', 'val accuracy', 'train loss', 'train accuracy'])
         
         # Save plot
@@ -149,7 +149,7 @@ class QualityInspectionTrainer:
     
     def evaluate_on_test(self, test_dataset, threshold=0.5):
         """
-        Evaluate model on test data following notebook approach.
+        Evaluate model on test data.
         
         Args:
             test_dataset: Test dataset generator
@@ -173,7 +173,7 @@ class QualityInspectionTrainer:
         y_pred_class = (y_pred_prob >= threshold).reshape(-1,)
         y_true_class = test_dataset.classes[test_dataset.index_array]
         
-        # Create confusion matrix following notebook format
+        # Create confusion matrix
         cm = confusion_matrix(y_true_class, y_pred_class)
         cm_df = pd.DataFrame(
             cm,
@@ -188,7 +188,7 @@ class QualityInspectionTrainer:
         print("\nClassification Report:")
         print(classification_report(y_true_class, y_pred_class, digits=4))
         
-        # Visualize predictions following notebook approach
+        # Visualize predictions
         self._visualize_predictions(test_dataset, threshold)
         
         return {
@@ -199,7 +199,7 @@ class QualityInspectionTrainer:
         }
     
     def _visualize_predictions(self, test_dataset, threshold=0.5):
-        """Visualize predictions following notebook approach."""
+        """Visualize predictions."""
         mapping_class = {0: "ok", 1: "defect"}
         
         # Get a batch for visualization
@@ -242,9 +242,9 @@ class QualityInspectionTrainer:
         
         print(f"📊 Prediction visualization saved: {viz_path}")
 
-def train_model_notebook_style(config):
+def train_model(config):
     """
-    Train model following the exact notebook approach.
+    Train the quality inspection model.
     
     Args:
         config: Training configuration dictionary
@@ -253,21 +253,21 @@ def train_model_notebook_style(config):
         Trained model path
     """
     print("\n" + "="*70)
-    print("🚀 QUALITY INSPECTION TRAINING (NOTEBOOK STYLE)")
+    print("🚀 QUALITY INSPECTION TRAINING")
     print("="*70)
     
-    # Create data generators following notebook
+    # Create data generators
     try:
         train_dataset, validation_dataset, test_dataset = get_data_generators(
             data_dir=config['data_dir'],
-            image_size=(300, 300),  # Following notebook
-            batch_size=config.get('batch_size', 64),  # Following notebook
-            seed=123  # Following notebook
+            image_size=(300, 300),
+            batch_size=config.get('batch_size', 64),
+            seed=123
         )
         
         print("✅ Data generators created successfully!")
         
-        # Analyze data distribution following notebook
+        # Analyze data distribution
         data_crosstab = analyze_data_distribution(train_dataset, validation_dataset, test_dataset)
         print("\nData Distribution:")
         print(data_crosstab)

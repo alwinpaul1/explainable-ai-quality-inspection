@@ -14,7 +14,7 @@ from tensorflow import keras
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.data.dataset import get_data_generators, analyze_data_distribution
-from src.training.train_model import train_model_notebook_style, QualityInspectionTrainer
+from src.training.train_model import train_model, QualityInspectionTrainer
 from src.evaluation.evaluate_model import ModelEvaluator
 from src.explainability.explain_model import ModelExplainer
 
@@ -191,9 +191,9 @@ def install_kaggle_api():
         return False
 
 
-def train_model(config):
+def train_model_pipeline(config):
     """Train the quality inspection model."""
-    return train_model_notebook_style(config)
+    return train_model(config)
 
 def evaluate_model(model_path, data_dir, config):
     """Evaluate the trained model."""
@@ -334,7 +334,7 @@ def run_complete_pipeline(config):
     
     # Train model
     if config.get('train', True):
-        best_model_path = train_model(config)
+        best_model_path = train_model_pipeline(config)
         config['model_path'] = best_model_path
     else:
         if not config.get('model_path'):
