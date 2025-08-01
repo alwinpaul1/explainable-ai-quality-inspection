@@ -12,6 +12,7 @@ This project demonstrates end-to-end machine learning pipeline development for c
 - **CNN Architecture**: Custom Sequential model with 676,945 parameters achieving 99.44% accuracy
 - **Explainability Methods**: Implementation of LIME, SHAP, Grad-CAM, and Integrated Gradients
 - **Dataset Handling**: Processing of 7,348 industrial casting images with automated data pipeline
+- **Class Imbalance Solution**: Comprehensive data augmentation methodology with 9 transformation techniques
 - **Model Optimization**: Training pipeline with data augmentation, regularization, and performance monitoring
 - **Visualization System**: Comprehensive analysis dashboards and model interpretation tools
 
@@ -70,12 +71,20 @@ Sequential([
 ])
 ```
 
-### Training Implementation
+### Training Implementation & Class Balance Strategy
 - **Optimization**: Adam optimizer with binary crossentropy loss
-- **Regularization**: Dropout layers (0.2) and data augmentation
-- **Data Augmentation**: Rotation, translation, brightness variation, flipping
-- **Validation**: 20% split with ModelCheckpoint for best model selection
-- **Monitoring**: Training curves and performance metrics tracking
+- **Regularization**: Dropout layers (0.2) and comprehensive data augmentation
+- **Class Imbalance Handling**: 
+  - Primary: Extensive data augmentation pipeline (9 different transformations)
+  - Secondary: Balanced validation split (20%) for unbiased evaluation
+  - Monitoring: Precision, recall, and F1-score tracking for both classes
+- **Data Augmentation Pipeline**: 
+  - Geometric: 360° rotation, ±5% translation, ±5% shear, ±5% zoom
+  - Flip: Horizontal and vertical flipping
+  - Intensity: ±25% brightness variation
+- **Validation Strategy**: 20% split with ModelCheckpoint for best model selection
+- **Performance Monitoring**: Training curves, confusion matrix, and per-class metrics tracking
+- **Threshold Optimization**: Configurable classification threshold for precision-recall balance
 
 ---
 
@@ -135,10 +144,10 @@ python main.py --mode full --download-data --epochs 25 --batch-size 64
 python main.py --mode train --epochs 25 --batch-size 64
 
 # Model evaluation
-python main.py --mode evaluate --model-path results/models/cnn_casting_inspection_model.hdf5
+python main.py --mode evaluate --model-path results/models/cnn_casting_inspection_model.keras
 
 # Explainability analysis
-python main.py --mode explain --model-path results/models/cnn_casting_inspection_model.hdf5
+python main.py --mode explain --model-path results/models/cnn_casting_inspection_model.keras
 ```
 
 ---
@@ -154,7 +163,7 @@ python main.py --mode explain --model-path results/models/cnn_casting_inspection
 ### Output Artifacts
 
 #### Model Files
-- Trained CNN model (HDF5 format, 2.6MB)
+- Trained CNN model (Keras format, 2.6MB)
 - Training history and performance metrics
 - Model architecture visualization
 
@@ -175,11 +184,44 @@ python main.py --mode explain --model-path results/models/cnn_casting_inspection
 
 ## Implementation Details
 
-### Dataset Processing
-- **Image Format**: 300×300 grayscale preprocessing
-- **Data Split**: Train (6,633), Test (715) with class balance handling
-- **Augmentation Pipeline**: Rotation, translation, brightness, scaling transformations
-- **Automated Download**: Kaggle API integration with dataset validation
+### Dataset Processing & Class Imbalance Handling
+
+#### Data Distribution Strategy
+- **Dataset Split**: Train (6,633 images), Test (715 images) with 80/20 train-validation split
+- **Class Balance Analysis**: Comprehensive data distribution analysis with visualization
+- **Image Format**: 300×300 grayscale preprocessing with normalization (1/255 scaling)
+
+#### Data Augmentation Methodology for Class Imbalance
+The system employs a comprehensive data augmentation strategy to address class imbalance and improve model generalization:
+
+**Augmentation Techniques Applied:**
+- **Rotation Augmentation**: `rotation_range=360` - Full 360-degree rotation for maximum variety
+- **Spatial Transformations**: 
+  - `width_shift_range=0.05` - Horizontal translation (±5%)
+  - `height_shift_range=0.05` - Vertical translation (±5%)
+  - `shear_range=0.05` - Shear transformation (±5%)
+- **Scale Variations**: `zoom_range=0.05` - Zoom in/out (±5%)
+- **Flip Augmentations**: 
+  - `horizontal_flip=True` - Horizontal flipping
+  - `vertical_flip=True` - Vertical flipping
+- **Brightness Variation**: `brightness_range=[0.75, 1.25]` - ±25% brightness adjustment
+
+**Implementation Details:**
+- **Training Data**: Full augmentation pipeline applied to training set
+- **Validation Data**: Same augmentation pipeline for validation consistency
+- **Test Data**: No augmentation (clean evaluation data)
+- **Reproducibility**: Fixed random seed (123) for consistent results
+
+#### Class Imbalance Mitigation Strategy
+1. **Data Augmentation as Primary Method**: Extensive augmentation creates synthetic samples to balance class distribution
+2. **Validation Split**: 20% validation split ensures balanced evaluation during training
+3. **Performance Monitoring**: Comprehensive metrics tracking (precision, recall, F1-score) to monitor class-specific performance
+4. **Threshold Optimization**: Configurable classification threshold (default 0.5) for precision-recall trade-off
+
+#### Automated Download & Validation
+- **Kaggle API Integration**: Automated dataset download with authentication
+- **Dataset Validation**: Structure verification and completeness checks
+- **Error Handling**: Robust fallback mechanisms for data loading issues
 
 ### Model Implementation
 - **Framework**: TensorFlow 2.13+ with Keras API
