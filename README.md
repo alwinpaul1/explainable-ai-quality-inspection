@@ -204,7 +204,7 @@ python main.py --mode full --download-data --gpu --epochs 25
 
 ## 📊 Results & Outputs
 
-### **📈 Model Performance**
+### **Model Performance**
 - **Accuracy**: 99.44% on test set
 - **Precision**: 99.34% (minimal false positives)
 - **Recall**: 99.78% (minimal false negatives)  
@@ -273,86 +273,30 @@ python main.py --mode full --download-data --gpu --epochs 25
 
 ---
 
-## 🎯 Use Cases & Applications
+## Technical Specifications
 
-### **🏭 Industrial Applications**
-- **Manufacturing QC**: Automated defect detection in production lines
-- **Cost Reduction**: Reduce manual inspection time by 90%+
-- **Quality Assurance**: Consistent, objective quality standards
-- **Process Optimization**: Identify defect patterns and root causes
+### **Dataset Intelligence**
+- **Smart Download**: Automatic skip if complete dataset exists
+- **Validation Checks**: Structure integrity, image counts, file formats
+- **Class Balance**: Handles imbalanced dataset (ok_front: 3,137, def_front: 4,211)
+- **Augmentation**: 7 transformation types for robust training
 
-### **🔬 Research Applications**  
-- **Explainable AI**: Study interpretability methods in computer vision
-- **Industrial AI**: Benchmark for manufacturing AI applications
-- **Model Comparison**: Compare CNN architectures on real industrial data
-- **Visualization Research**: Advanced explanation visualization techniques
+### **Explainability Engine**
+- **LIME**: Local superpixel perturbation with 1000+ samples
+- **SHAP**: Enhanced background generation with 10 diverse samples
+- **Grad-CAM**: Gradient-weighted class activation mapping
+- **Integrated Gradients**: Path-based attribution with 50-step integration
 
-### **📚 Educational Use**
-- **ML Pipeline**: Complete end-to-end machine learning workflow
-- **Computer Vision**: Practical CNN implementation and training
-- **Explainable AI**: Hands-on experience with interpretation methods
-- **Industrial AI**: Real-world application of AI in manufacturing
+### **Performance Optimizations**
+- **Memory Efficient**: Batch processing for large images
+- **GPU Compatible**: Automatic CUDA detection and memory growth
+- **TensorFlow 2.x**: Modern gradient computation with @tf.function
+- **Error Resilient**: Comprehensive exception handling and recovery
 
----
-
-## 🚀 Advanced Features
-
-### **🎛️ Flexible Pipeline**
-- **Modular Design**: Run individual components independently
-- **Configuration**: Extensive parameter customization
-- **Extensible**: Easy to add new explainability methods
-- **Production Ready**: Comprehensive error handling and logging
-
-### **📊 Rich Analytics**
-- **Interactive Visualizations**: Publication-ready plots and charts
-- **Detailed Reporting**: Comprehensive evaluation metrics
-- **Export Options**: Multiple format support (PNG, JSON, TXT)
-- **Batch Processing**: Handle multiple samples efficiently
-
-### **🔧 Developer Experience**
-- **Clean Architecture**: Well-structured, documented codebase
-- **Type Hints**: Full type annotation support
-- **Error Messages**: Clear, actionable error reporting
-- **Documentation**: Comprehensive inline and external docs
-
----
-
-## 📖 Documentation
-
-- **[CLAUDE.md](CLAUDE.md)**: Comprehensive development guide
-- **[Code Documentation](src/)**: Inline documentation and type hints
-- **[Examples](results/)**: Sample outputs and visualizations
-- **[Issues](https://github.com/alwinpaul1/explainable-ai-quality-inspection/issues)**: Bug reports and feature requests
-
----
-
-## 🤝 Contributing
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
----
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
+## Repository
 
-## 🙏 Acknowledgments
-
-- **Dataset**: [Real-life Industrial Dataset of Casting Product](https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product)
-- **TensorFlow**: Deep learning framework
-- **LIME & SHAP**: Explainable AI libraries
-- **Industrial AI Community**: Inspiration and best practices
-
----
-
-**🔗 Repository**: [https://github.com/alwinpaul1/explainable-ai-quality-inspection](https://github.com/alwinpaul1/explainable-ai-quality-inspection)
-
----
-
-*Built with ❤️ for industrial AI and explainable machine learning*
+[https://github.com/alwinpaul1/explainable-ai-quality-inspection](https://github.com/alwinpaul1/explainable-ai-quality-inspection)
