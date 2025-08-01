@@ -64,9 +64,9 @@ python main.py --mode explain --model-path results/models/cnn_casting_inspection
 
 After training, you'll get:
 - **Trained model**: `results/models/cnn_casting_inspection_model.h5`
-- **Training plots**: `results/logs/training_curves.png`
-- **Predictions**: `results/logs/test_predictions.png`
-- **Explanations**: `results/explanations/explanation_sample_*.png`
+- **Training plots**: `results/logs/training_curves.png` and `results/logs/test_predictions.png`
+- **Evaluation reports**: `results/reports/evaluation_results.txt`, confusion matrices, ROC curves
+- **Explanations**: `results/explanations/explanation_sample_*.png` (LIME/SHAP visualizations)
 
 ---
 
