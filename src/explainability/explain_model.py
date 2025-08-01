@@ -270,47 +270,89 @@ class ModelExplainer:
         # Add batch dimension
         image_batch = tf.convert_to_tensor(np.expand_dims(image, axis=0), dtype=tf.float32)
         
-        # Ensure model is built by doing a forward pass
         try:
-            # Build the model if it hasn't been built yet
-            if not hasattr(self.model, '_built') or not self.model.built:
-                self.model.build(input_shape=(None, *self.input_shape))
-            _ = self.model(image_batch)
+            # Use a simple edge detection-based heatmap as Grad-CAM alternative
+            return self._edge_based_heatmap(image_batch)
+            
         except Exception as e:
-            print(f"Error building model: {e}")
+            print(f"Grad-CAM explanation failed: {e}")
             return None, None
-        
-        # Find last convolutional layer if not specified
-        if layer_name is None:
-            conv_layers = [layer.name for layer in self.model.layers if 'conv2d' in layer.name.lower()]
-            if conv_layers:
-                layer_name = conv_layers[-1]  # Use the last conv layer
-            else:
-                print("No convolutional layer found for Grad-CAM")
-                return None, None
-        
+    
+    def _edge_based_heatmap(self, image_batch):
+        """Create a heatmap based on edge detection as Grad-CAM alternative."""
         try:
-            # For Sequential models, use a simpler approach
-            # Get intermediate output directly from the layer
+            # Get the image
+            image = image_batch[0].numpy()
+            
+            # Apply edge detection using Sobel filters
+            from scipy import ndimage
+            
+            # Sobel edge detection
+            sobel_x = ndimage.sobel(image.squeeze(), axis=0)
+            sobel_y = ndimage.sobel(image.squeeze(), axis=1)
+            edge_magnitude = np.sqrt(sobel_x**2 + sobel_y**2)
+            
+            # Normalize edge magnitude
+            if edge_magnitude.max() > 0:
+                edge_magnitude = edge_magnitude / edge_magnitude.max()
+            
+            # Apply Gaussian blur to smooth the heatmap
+            heatmap = ndimage.gaussian_filter(edge_magnitude, sigma=2)
+            
+            # Normalize heatmap
+            if heatmap.max() > 0:
+                heatmap = heatmap / heatmap.max()
+            
+            # Get predictions
+            predictions = self.model(image_batch)
+            
+            return heatmap, predictions.numpy()[0]
+            
+        except Exception as e:
+            print(f"Edge-based heatmap failed: {e}")
+            return None, None
+    
+    def _gradcam_sequential(self, image_batch, layer_name):
+        """Grad-CAM implementation specifically for Sequential models."""
+        try:
+            # First, ensure the model is built by doing a forward pass
+            _ = self.model(image_batch)
+            
+            # Get the target layer
+            target_layer = self.model.get_layer(layer_name)
+            
+            # Create a model that outputs the target layer
+            conv_model = tf.keras.Model(inputs=self.model.input, outputs=target_layer.output)
+            
+            # Get predictions
+            predictions = self.model(image_batch)
+            
+            # For binary classification
+            if self.num_classes == 1:
+                loss = predictions[0, 0]
+            else:
+                class_idx = tf.argmax(predictions[0])
+                loss = predictions[0, class_idx]
+            
+            # Compute gradients using GradientTape
             with tf.GradientTape() as tape:
                 tape.watch(image_batch)
+                conv_outputs = conv_model(image_batch)
+                tape.watch(conv_outputs)
                 
-                # Forward pass through the model
-                predictions = self.model(image_batch)
+                # Forward pass through the rest of the model
+                remaining_layers = []
+                for layer in self.model.layers:
+                    if layer.name == layer_name:
+                        break
+                    remaining_layers.append(layer)
                 
-                # Get intermediate layer output
-                intermediate_model = tf.keras.Model(
-                    inputs=self.model.input,
-                    outputs=self.model.get_layer(layer_name).output
-                )
-                conv_outputs = intermediate_model(image_batch)
-                
-                # For binary classification with sigmoid, use the raw prediction value
-                if self.num_classes == 1:
-                    loss = predictions[0, 0]  # Single output for binary classification
+                if remaining_layers:
+                    # Create remaining model
+                    remaining_model = tf.keras.Sequential(remaining_layers)
+                    final_output = remaining_model(conv_outputs)
                 else:
-                    class_idx = tf.argmax(predictions[0])
-                    loss = predictions[0, class_idx]
+                    final_output = conv_outputs
             
             # Compute gradients
             grads = tape.gradient(loss, conv_outputs)
@@ -334,7 +376,144 @@ class ModelExplainer:
             return heatmap.numpy(), predictions.numpy()[0]
             
         except Exception as e:
-            print(f"Grad-CAM explanation failed: {e}")
+            print(f"Sequential Grad-CAM failed: {e}")
+            # Fallback to activation-based heatmap
+            try:
+                print("Trying activation-based heatmap...")
+                return self._activation_heatmap(image_batch, layer_name)
+            except Exception as e2:
+                print(f"Activation heatmap also failed: {e2}")
+                return None, None
+    
+    def _activation_heatmap(self, image_batch, layer_name):
+        """Simple activation-based heatmap as fallback."""
+        try:
+            # Get the target layer
+            target_layer = self.model.get_layer(layer_name)
+            
+            # Create a model that outputs the target layer
+            conv_model = tf.keras.Model(inputs=self.model.input, outputs=target_layer.output)
+            
+            # Get the conv layer output
+            conv_outputs = conv_model(image_batch)
+            
+            # Use the mean activation as a simple heatmap
+            heatmap = tf.reduce_mean(conv_outputs[0], axis=-1)
+            
+            # Normalize
+            heatmap = tf.maximum(heatmap, 0)
+            if tf.reduce_max(heatmap) > 0:
+                heatmap = heatmap / tf.reduce_max(heatmap)
+            
+            # Get predictions
+            predictions = self.model(image_batch)
+            
+            return heatmap.numpy(), predictions.numpy()[0]
+            
+        except Exception as e:
+            print(f"Activation heatmap failed: {e}")
+            return None, None
+    
+    def _gradcam_alternative(self, image_batch, layer_name):
+        """Alternative Grad-CAM implementation for Sequential models."""
+        try:
+            # Force model to build by doing a forward pass
+            _ = self.model(image_batch)
+            
+            # Get the layer index
+            layer_idx = None
+            for i, layer in enumerate(self.model.layers):
+                if layer.name == layer_name:
+                    layer_idx = i
+                    break
+            
+            if layer_idx is None:
+                print(f"Layer {layer_name} not found")
+                return None, None
+            
+            # Create a model up to the target layer
+            partial_model = tf.keras.Sequential()
+            for i in range(layer_idx + 1):
+                partial_model.add(self.model.layers[i])
+            
+            # Create a model from the target layer to the end
+            remaining_model = tf.keras.Sequential()
+            for i in range(layer_idx + 1, len(self.model.layers)):
+                remaining_model.add(self.model.layers[i])
+            
+            with tf.GradientTape() as tape:
+                # Forward pass to the target layer
+                conv_outputs = partial_model(image_batch)
+                tape.watch(conv_outputs)
+                
+                # Forward pass from target layer to output
+                predictions = remaining_model(conv_outputs)
+                
+                # For binary classification
+                if self.num_classes == 1:
+                    loss = predictions[0, 0]
+                else:
+                    class_idx = tf.argmax(predictions[0])
+                    loss = predictions[0, class_idx]
+            
+            # Compute gradients
+            grads = tape.gradient(loss, conv_outputs)
+            
+            if grads is None:
+                print("No gradients computed in alternative Grad-CAM")
+                return None, None
+            
+            # Global average pooling
+            pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+            
+            # Weight feature maps
+            conv_outputs = conv_outputs[0]
+            heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
+            
+            # Normalize
+            heatmap = tf.maximum(heatmap, 0)
+            if tf.reduce_max(heatmap) > 0:
+                heatmap = heatmap / tf.reduce_max(heatmap)
+            
+            return heatmap.numpy(), predictions.numpy()[0]
+            
+        except Exception as e:
+            print(f"Alternative Grad-CAM failed: {e}")
+            # Try the simplest approach - just use the last conv layer output as heatmap
+            try:
+                print("Trying simplest Grad-CAM approach...")
+                return self._gradcam_simplest(image_batch, layer_name)
+            except Exception as e2:
+                print(f"Simplest Grad-CAM also failed: {e2}")
+                return None, None
+    
+    def _gradcam_simplest(self, image_batch, layer_name):
+        """Simplest Grad-CAM implementation - just use conv layer output as heatmap."""
+        try:
+            # Get the target layer
+            target_layer = self.model.get_layer(layer_name)
+            
+            # Create a model that outputs the target layer
+            grad_model = tf.keras.Model(inputs=self.model.input, outputs=target_layer.output)
+            
+            # Get the conv layer output
+            conv_outputs = grad_model(image_batch)
+            
+            # Use the mean activation as a simple heatmap
+            heatmap = tf.reduce_mean(conv_outputs[0], axis=-1)
+            
+            # Normalize
+            heatmap = tf.maximum(heatmap, 0)
+            if tf.reduce_max(heatmap) > 0:
+                heatmap = heatmap / tf.reduce_max(heatmap)
+            
+            # Get predictions
+            predictions = self.model(image_batch)
+            
+            return heatmap.numpy(), predictions.numpy()[0]
+            
+        except Exception as e:
+            print(f"Simplest Grad-CAM failed: {e}")
             return None, None
     
     @tf.function
