@@ -13,6 +13,66 @@ from tensorflow import keras
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
+def check_tensorflow_gpu_support():
+    """Check TensorFlow GPU support and provide detailed information."""
+    print(f"🔍 TensorFlow Version: {tf.__version__}")
+    print(f"🔍 Python Version: {sys.version}")
+    
+    # Check CUDA support
+    cuda_available = tf.test.is_built_with_cuda()
+    print(f"🔍 CUDA Support: {'✅ Available' if cuda_available else '❌ Not Available'}")
+    
+    # Check GPU devices
+    gpu_devices = tf.config.list_physical_devices('GPU')
+    print(f"🔍 CUDA GPUs: {len(gpu_devices)} device(s)")
+    
+    # Check MPS support (Apple Silicon)
+    try:
+        mps_devices = tf.config.list_physical_devices('MPS')
+        print(f"🔍 MPS Devices: {len(mps_devices)} device(s)")
+    except:
+        print(f"🔍 MPS Devices: Not available in this TensorFlow version")
+    
+    return cuda_available, len(gpu_devices)
+
+def test_gpu_performance():
+    """Test GPU performance with a simple computation."""
+    print(f"\n🧪 GPU Performance Test:")
+    print("-" * 40)
+    
+    try:
+        # Create a simple tensor operation
+        with tf.device('/GPU:0'):
+            a = tf.random.normal([1000, 1000])
+            b = tf.random.normal([1000, 1000])
+            start_time = tf.timestamp()
+            c = tf.matmul(a, b)
+            end_time = tf.timestamp()
+            gpu_time = end_time - start_time
+            print(f"✅ GPU computation time: {gpu_time:.4f} seconds")
+    except:
+        print(f"❌ GPU test failed")
+        gpu_time = None
+    
+    try:
+        # Compare with CPU
+        with tf.device('/CPU:0'):
+            a = tf.random.normal([1000, 1000])
+            b = tf.random.normal([1000, 1000])
+            start_time = tf.timestamp()
+            c = tf.matmul(a, b)
+            end_time = tf.timestamp()
+            cpu_time = end_time - start_time
+            print(f"✅ CPU computation time: {cpu_time:.4f} seconds")
+            
+            if gpu_time:
+                speedup = cpu_time / gpu_time
+                print(f"🚀 GPU speedup: {speedup:.2f}x faster than CPU")
+    except:
+        print(f"❌ CPU test failed")
+    
+    print("-" * 40)
+
 from src.data.dataset import get_data_generators, analyze_data_distribution
 from src.training.train_model import train_model, QualityInspectionTrainer
 from src.evaluation.evaluate_model import ModelEvaluator
@@ -455,23 +515,90 @@ def main():
             print(f"{key}: {value}")
     print("-" * 40)
     
-    # Configure TensorFlow GPU usage (automatic detection)
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
+    # Check TensorFlow GPU support
+    print("\n🔧 GPU Configuration:")
+    print("-" * 40)
+    cuda_available, num_gpus = check_tensorflow_gpu_support()
+    print("-" * 40)
+    
+    # Test GPU performance if available
+    if cuda_available or (hasattr(tf.config, 'list_physical_devices') and tf.config.list_physical_devices('MPS')):
+        test_gpu_performance()
+    
+    # Check for CUDA GPUs first
+    cuda_gpus = tf.config.experimental.list_physical_devices('GPU')
+    if cuda_gpus:
         try:
-            # Enable memory growth for GPU
-            for gpu in gpus:
+            # Enable memory growth for CUDA GPUs
+            for gpu in cuda_gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"GPU available: {len(gpus)} GPU(s) detected and configured")
+            print(f"✅ CUDA GPU detected: {len(cuda_gpus)} GPU(s)")
+            print(f"   - Memory growth enabled for optimal performance")
+            print(f"   - Using CUDA acceleration")
+            
+            # Set mixed precision for better performance
+            tf.keras.mixed_precision.set_global_policy('mixed_float16')
+            print(f"   - Mixed precision enabled for faster training")
+            
         except RuntimeError as e:
-            print(f"GPU configuration error: {e}")
+            print(f"❌ CUDA GPU configuration error: {e}")
+            print(f"   - Falling back to CPU")
+    
+    # Check for Apple Silicon MPS (Metal Performance Shaders)
+    elif hasattr(tf.config, 'list_physical_devices'):
+        try:
+            mps_devices = tf.config.list_physical_devices('MPS')
+            if mps_devices:
+                print(f"✅ Apple Silicon MPS detected: {len(mps_devices)} device(s)")
+                print(f"   - Metal Performance Shaders enabled")
+                print(f"   - Using MPS acceleration")
+                
+                # Enable MPS for Apple Silicon
+                try:
+                    tf.config.experimental.set_memory_growth(mps_devices[0], True)
+                    print(f"   - Memory growth enabled for optimal performance")
+                except:
+                    print(f"   - Memory growth not available for MPS")
+                
+            else:
+                print(f"ℹ️  No MPS devices detected. Using CPU.")
+        except Exception as e:
+            print(f"ℹ️  MPS detection failed: {e}")
+            print(f"   - Using CPU")
+    
     else:
-        print("No GPU detected. Using CPU.")
+        print(f"ℹ️  No GPU detected. Using CPU.")
+    
+    print("-" * 40)
+    
+    # Set optimal device strategy
+    try:
+        if cuda_gpus:
+            # Use MirroredStrategy for multi-GPU training
+            if len(cuda_gpus) > 1:
+                strategy = tf.distribute.MirroredStrategy()
+                print(f"🚀 Using MirroredStrategy for {len(cuda_gpus)} GPUs")
+            else:
+                strategy = tf.distribute.OneDeviceStrategy("/GPU:0")
+                print(f"🚀 Using single GPU strategy")
+        elif hasattr(tf.config, 'list_physical_devices') and tf.config.list_physical_devices('MPS'):
+            strategy = tf.distribute.OneDeviceStrategy("/MPS:0")
+            print(f"🚀 Using MPS strategy")
+        else:
+            strategy = tf.distribute.OneDeviceStrategy("/CPU:0")
+            print(f"🚀 Using CPU strategy")
+    except Exception as e:
+        print(f"⚠️  Strategy setup failed: {e}")
+        strategy = tf.distribute.OneDeviceStrategy("/CPU:0")
+        print(f"🚀 Falling back to CPU strategy")
     
     # Set random seeds for reproducibility (following notebook)
     tf.random.set_seed(config['seed'])
     import numpy as np
     np.random.seed(config['seed'])
+    
+    # Add strategy to config
+    config['strategy'] = strategy
     
     # Run pipeline with notebook approach
     run_complete_pipeline(config)
