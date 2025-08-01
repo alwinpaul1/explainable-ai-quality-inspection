@@ -30,9 +30,15 @@ def setup_directories():
         print(f"Created directory: {dir_path}")
 
 def download_dataset(data_dir='data'):
-    """Download casting dataset using Kaggle API only."""
+    """Download casting dataset using Kaggle API only if not already present."""
     from pathlib import Path
     import subprocess
+    
+    # Check if dataset already exists and is complete
+    if verify_casting_dataset_structure(data_dir):
+        print("✅ Dataset already exists and is complete!")
+        print(f"📁 Using existing dataset at: {data_dir}")
+        return True
     
     print("🔽 Downloading Casting Product Image Dataset...")
     
@@ -103,37 +109,72 @@ def verify_casting_dataset_structure(data_dir):
     data_path = Path(data_dir)
     
     if not data_path.exists():
-        print(f"❌ Data directory does not exist: {data_path}")
         return False
+    
+    # Check for expected casting dataset structure
+    casting_data_path = data_path / 'casting_data' / 'casting_data'
+    
+    # Expected structure validation
+    expected_dirs = [
+        casting_data_path / 'train' / 'ok_front',
+        casting_data_path / 'train' / 'def_front',
+        casting_data_path / 'test' / 'ok_front', 
+        casting_data_path / 'test' / 'def_front'
+    ]
+    
+    # Check if all expected directories exist
+    for expected_dir in expected_dirs:
+        if not expected_dir.exists():
+            return False
+    
+    # Count images in each directory to ensure dataset is complete
+    image_extensions = ['.jpg', '.jpeg', '.png']
+    min_images_per_class = 100  # Minimum threshold for a complete dataset
+    
+    for expected_dir in expected_dirs:
+        image_count = sum(1 for f in expected_dir.iterdir() 
+                         if f.is_file() and f.suffix.lower() in image_extensions)
+        if image_count < min_images_per_class:
+            return False
     
     # Count total images in the dataset
-    image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.JPG', '*.JPEG', '*.PNG']
     total_images = 0
-    
-    for ext in image_extensions:
+    for ext in ['*.jpg', '*.jpeg', '*.png', '*.JPG', '*.JPEG', '*.PNG']:
         total_images += len(list(data_path.rglob(ext)))
     
-    if total_images == 0:
-        print(f"❌ No images found in: {data_path}")
+    if total_images < 1000:  # Expect at least 1000 images for complete dataset
         return False
     
-    print(f"✅ Found {total_images} images in dataset")
-    
-    # Show the actual structure
-    print("📁 Dataset structure:")
-    import os
-    for root, dirs, files in os.walk(data_path):
-        level = root.replace(str(data_path), '').count(os.sep)
-        indent = ' ' * 2 * level
-        print(f"{indent}{os.path.basename(root)}/")
-        
-        # Count images in this directory
-        image_count = sum(1 for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png')))
-        if image_count > 0:
-            subindent = ' ' * 2 * (level + 1)
-            print(f"{subindent}[{image_count} images]")
-    
     return True
+
+def _show_dataset_info(data_dir):
+    """Show dataset information when found."""
+    from pathlib import Path
+    
+    data_path = Path(data_dir)
+    casting_data_path = data_path / 'casting_data' / 'casting_data'
+    
+    # Count images in each directory
+    image_extensions = ['.jpg', '.jpeg', '.png']
+    
+    print("📁 Dataset structure:")
+    for split in ['train', 'test']:
+        split_path = casting_data_path / split
+        if split_path.exists():
+            print(f"  {split}/")
+            for class_name in ['ok_front', 'def_front']:
+                class_path = split_path / class_name
+                if class_path.exists():
+                    image_count = sum(1 for f in class_path.iterdir() 
+                                     if f.is_file() and f.suffix.lower() in image_extensions)
+                    print(f"    {class_name}/  [{image_count} images]")
+    
+    # Total count
+    total_images = 0
+    for ext in ['*.jpg', '*.jpeg', '*.png', '*.JPG', '*.JPEG', '*.PNG']:
+        total_images += len(list(data_path.rglob(ext)))
+    
+    print(f"📊 Total images in dataset: {total_images}")
 
 def install_kaggle_api():
     """Install Kaggle API if not present."""
@@ -265,11 +306,11 @@ def run_complete_pipeline(config):
     # Setup directories
     setup_directories()
     
-    # Handle dataset setup - prioritize real data download
+    # Handle dataset setup - smart data management
     dataset_ready = False
     
     if config.get('download_data', False):
-        print("🔽 Downloading real dataset...")
+        print("🔽 Checking and downloading dataset if needed...")
         dataset_ready = download_dataset(config['data_dir'])
         if not dataset_ready:
             print("❌ Dataset download failed. Please download manually.")
@@ -279,6 +320,8 @@ def run_complete_pipeline(config):
         dataset_ready = verify_casting_dataset_structure(config['data_dir'])
         if dataset_ready:
             print("✅ Existing dataset found!")
+            # Show dataset info when found
+            _show_dataset_info(config['data_dir'])
         else:
             print("❌ No dataset found. Please use --download-data to download the casting dataset.")
             print("   Or manually place the casting dataset in the 'data/' directory")
