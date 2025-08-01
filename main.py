@@ -20,7 +20,7 @@ from src.explainability.explain_model import ModelExplainer
 def setup_directories():
     """Create necessary directories."""
     dirs = [
-        'results/models', 'results/logs', 'results/experiments',
+        'results/models', 'results/logs',
         'results/explanations', 'results/reports'
     ]
     
