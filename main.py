@@ -412,8 +412,6 @@ def main():
                        help='Number of samples to explain')
     
     # System arguments
-    parser.add_argument('--gpu', action='store_true',
-                       help='Use GPU if available (TensorFlow will auto-detect)')
     parser.add_argument('--seed', type=int, default=123,
                        help='Random seed for reproducibility (notebook uses 123)')
     
@@ -436,8 +434,7 @@ def main():
         'log_dir': args.log_dir,
         'num_explanation_samples': args.num_explanation_samples,
         'image_size': (args.image_size, args.image_size),
-        'seed': args.seed,
-        'use_gpu': args.gpu
+        'seed': args.seed
     }
     
     # Set training/evaluation/explanation flags based on mode
@@ -458,21 +455,18 @@ def main():
             print(f"{key}: {value}")
     print("-" * 40)
     
-    # Configure TensorFlow GPU usage
-    if args.gpu:
-        gpus = tf.config.experimental.list_physical_devices('GPU')
-        if gpus:
-            try:
-                # Enable memory growth for GPU
-                for gpu in gpus:
-                    tf.config.experimental.set_memory_growth(gpu, True)
-                print(f"GPU available: {len(gpus)} GPU(s) detected")
-            except RuntimeError as e:
-                print(f"GPU configuration error: {e}")
-        else:
-            print("GPU requested but not available. Using CPU.")
+    # Configure TensorFlow GPU usage (automatic detection)
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Enable memory growth for GPU
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            print(f"GPU available: {len(gpus)} GPU(s) detected and configured")
+        except RuntimeError as e:
+            print(f"GPU configuration error: {e}")
     else:
-        print("Using CPU (following notebook approach)")
+        print("No GPU detected. Using CPU.")
     
     # Set random seeds for reproducibility (following notebook)
     tf.random.set_seed(config['seed'])
