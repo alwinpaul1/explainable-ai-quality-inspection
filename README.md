@@ -2,7 +2,7 @@
 
 **Advanced industrial defect detection system with comprehensive explainable AI for casting product quality inspection using TensorFlow/Keras.**
 
-![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg) ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.13+-orange.svg) ![Lines of Code](https://img.shields.io/badge/lines_of_code-1874-brightgreen.svg)
+![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg) ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.13+-orange.svg)
 
 ## 🎯 What This System Does
 
