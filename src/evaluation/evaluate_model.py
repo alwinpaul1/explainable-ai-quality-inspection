@@ -1,5 +1,5 @@
 """
-Model evaluation utilities following notebook approach
+Model evaluation utilities
 """
 
 import os
@@ -17,7 +17,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.data.dataset import get_data_generators
 
 class ModelEvaluator:
-    """Model evaluation following notebook approach."""
+    """Model evaluation for quality inspection."""
     
     def __init__(self, model_path, model_type='simple', num_classes=1):
         """
@@ -44,7 +44,7 @@ class ModelEvaluator:
     
     def evaluate(self, test_dataset, threshold=0.5, save_plots=True, save_dir='results/reports'):
         """
-        Comprehensive evaluation following notebook approach.
+        Comprehensive evaluation.
         
         Args:
             test_dataset: TensorFlow dataset generator
@@ -59,7 +59,7 @@ class ModelEvaluator:
             raise ValueError("Model not loaded properly!")
             
         print("\n" + "="*60)
-        print("📊 MODEL EVALUATION (NOTEBOOK STYLE)")
+        print("📊 MODEL EVALUATION")
         print("="*60)
         
         # Create save directory
@@ -73,26 +73,28 @@ class ModelEvaluator:
         y_pred_class = (y_pred_prob >= threshold).reshape(-1,)
         y_true_class = test_dataset.classes[test_dataset.index_array]
         
-        # Calculate detailed metrics following notebook
+        # Calculate detailed metrics
         accuracy = np.mean(y_true_class == y_pred_class)
         precision = precision_score(y_true_class, y_pred_class)
         recall = recall_score(y_true_class, y_pred_class)
         f1 = f1_score(y_true_class, y_pred_class)
         
-        print(f"\n🎯 DETAILED TEST RESULTS (Following Notebook):")
+        print(f"\n🎯 DETAILED TEST RESULTS:")
         print(f"📊 Accuracy: {accuracy*100:.2f}%")
         print(f"📊 Precision: {precision*100:.2f}%")
         print(f"📊 Recall: {recall*100:.2f}%")
         print(f"📊 F1 Score: {f1*100:.2f}%")
         
-        # Add notebook-style summary message
-        print(f"\n✨ On test dataset, the model achieves a very good result as follow:")
-        print(f"   • Accuracy: {accuracy*100:.2f}%")
-        print(f"   • Recall: {recall*100:.2f}%")
-        print(f"   • Precision: {precision*100:.2f}%")
-        print(f"   • F1 score: {f1*100:.2f}%")
+        # Add exact summary message from cell 43
+        print(f"\nAccording to the problem statement, we want to minimize the case of False Negative, where the `defect` product is misclassified as `ok`. This can cause the whole order to be rejected and create a big loss for the company. Therefore, in this case, we prioritize Recall over Precision.")
+        print(f"\nBut if we take into account the cost of re-casting a product, we have to minimize the case of False Positive also, where the `ok` product is misclassified as `defect`. Therefore we can prioritize the F1 score which combines both Recall and Precision.")
+        print(f"\nOn test dataset, the model achieves a very good result as follow:")
+        print(f"- Accuracy: {accuracy*100:.2f}%")
+        print(f"- Recall: {recall*100:.2f}%")
+        print(f"- Precision: {precision*100:.2f}%")
+        print(f"- F1 score: {f1*100:.2f}%")
         
-        # Create confusion matrix following notebook format
+        # Create confusion matrix
         cm = confusion_matrix(y_true_class, y_pred_class)
         cm_df = pd.DataFrame(
             cm,
@@ -114,16 +116,16 @@ class ModelEvaluator:
             self._plot_confusion_matrix(cm, save_dir)
             self._plot_roc_curve(y_true_class, y_pred_prob, save_dir)
         
-        # Add "Visualize Results" section following notebook
+        # Add "Visualize Results" section
         if save_plots:
             self._visualize_results(test_dataset, y_pred_prob, threshold, save_dir)
         
-        # Analyze misclassified samples following notebook
-        misclassified_indices = np.where(y_pred_class != y_true_class)[0]
-        print(f"\n🔍 Misclassified samples: {len(misclassified_indices)} out of {len(y_true_class)}")
+        # Analyze misclassified samples following exact notebook approach
+        misclassify_pred = np.nonzero(y_pred_class != y_true_class)[0]
+        print(f"\n🔍 Misclassified samples: {len(misclassify_pred)} out of {len(y_true_class)}")
         
-        if len(misclassified_indices) > 0 and save_plots:
-            self._visualize_misclassified(test_dataset, misclassified_indices, 
+        if len(misclassify_pred) > 0 and save_plots:
+            self._visualize_misclassified(test_dataset, misclassify_pred, 
                                         y_pred_prob, threshold, save_dir)
         
         # Prepare results dictionary with detailed metrics
@@ -137,7 +139,7 @@ class ModelEvaluator:
             'y_pred': y_pred_class,
             'y_pred_prob': y_pred_prob.flatten(),
             'classification_report': report,
-            'misclassified_indices': misclassified_indices,
+            'misclassified_indices': misclassify_pred,
             'threshold': threshold
         }
         
@@ -146,7 +148,7 @@ class ModelEvaluator:
         with open(results_file, 'w') as f:
             f.write("MODEL EVALUATION RESULTS\n")
             f.write("="*50 + "\n\n")
-            f.write(f"DETAILED TEST RESULTS (Following Notebook):\n")
+            f.write(f"DETAILED TEST RESULTS:\n")
             f.write(f"Accuracy: {accuracy*100:.2f}%\n")
             f.write(f"Precision: {precision*100:.2f}%\n")
             f.write(f"Recall: {recall*100:.2f}%\n")
@@ -160,7 +162,7 @@ class ModelEvaluator:
             f.write(str(cm_df) + "\n\n")
             f.write("Classification Report:\n")
             f.write(report + "\n\n")
-            f.write(f"Misclassified samples: {len(misclassified_indices)} out of {len(y_true_class)}\n")
+            f.write(f"Misclassified samples: {len(misclassify_pred)} out of {len(y_true_class)}\n")
             f.write(f"Classification threshold: {threshold}\n")
         
         print(f"\n💾 Results saved to: {results_file}")
@@ -168,7 +170,7 @@ class ModelEvaluator:
         return results
     
     def _plot_confusion_matrix(self, cm, save_dir):
-        """Plot confusion matrix following notebook style."""
+        """Plot confusion matrix."""
         plt.figure(figsize=(8, 6))
         
         # Plot with seaborn heatmap
@@ -233,25 +235,26 @@ class ModelEvaluator:
         print(f"📊 ROC curve saved: {roc_path}")
     
     def _visualize_results(self, test_dataset, y_pred_prob, threshold, save_dir):
-        """Visualize results comparing true vs predicted labels with probabilities (following notebook)."""
+        """Visualize results comparing true vs predicted labels with probabilities."""
         mapping_class = {0: "ok", 1: "defect"}
         
-        # Get first batch of test images
+        # Get first batch of test images (following exact notebook approach)
         images, labels = next(iter(test_dataset))
-        batch_size = len(images)
+        BATCH_SIZE = len(images)
+        IMAGE_SIZE = (300, 300)  # Target image size
         
-        # Create 4x4 grid (16 images) following notebook style
+        # Reshape images following notebook approach
+        images = images.reshape(BATCH_SIZE, *IMAGE_SIZE)
+        
+        # Create 4x4 grid (16 images)
         fig, axes = plt.subplots(4, 4, figsize=(16, 16))
         
-        for i, (ax, img, label) in enumerate(zip(axes.flat, images, labels)):
-            if i >= 16:  # Only show first 16 images
-                break
-                
-            ax.imshow(img.squeeze(), cmap="gray")
+        for ax, img, label in zip(axes.flat, images, labels):
+            ax.imshow(img, cmap="gray")
             true_label = mapping_class[int(label)]
             
-            # Get prediction for this specific image
-            pred_prob = self.model.predict(img.reshape(1, *img.shape), verbose=0)[0][0]
+            # Get prediction following exact notebook approach
+            [[pred_prob]] = self.model.predict(img.reshape(1, *IMAGE_SIZE, -1))
             pred_label = mapping_class[int(pred_prob >= threshold)]
             
             prob_class = 100 * pred_prob if pred_label == "defect" else 100 * (1 - pred_prob)
@@ -281,58 +284,52 @@ class ModelEvaluator:
     
     def _visualize_misclassified(self, test_dataset, misclassified_indices, 
                                y_pred_prob, threshold, save_dir):
-        """Visualize misclassified samples following notebook approach."""
+        """Visualize misclassified samples following exact notebook approach."""
         mapping_class = {0: "ok", 1: "defect"}
         
-        # Get a few misclassified samples
-        num_samples = min(4, len(misclassified_indices))
-        sample_indices = misclassified_indices[:num_samples]
-        
-        # Get images from dataset
-        images, labels = next(iter(test_dataset))
+        # Use exact notebook variable names and approach
+        misclassify_pred = misclassified_indices
+        BATCH_SIZE = test_dataset.batch_size
+        IMAGE_SIZE = (300, 300)
         
         fig, axes = plt.subplots(2, 2, figsize=(8, 8))
-        axes = axes.flatten()
         
-        for i, idx in enumerate(sample_indices):
-            if i >= len(axes):
-                break
-                
-            # Get the image at this index (approximate)
-            batch_num = idx // test_dataset.batch_size
-            image_num = idx % test_dataset.batch_size
-            
+        # Following exact notebook approach for accessing misclassified samples
+        for ax, batch_num, image_num in zip(axes.flat, 
+                                          misclassify_pred // BATCH_SIZE, 
+                                          misclassify_pred % BATCH_SIZE):
             try:
-                batch_images, batch_labels = test_dataset[batch_num]
-                img = batch_images[image_num]
-                true_label = mapping_class[int(batch_labels[image_num])]
+                # Access the specific batch following notebook approach
+                images, labels = test_dataset[batch_num]
+                img = images[image_num]
+                ax.imshow(img.reshape(*IMAGE_SIZE), cmap="gray")
                 
-                # Get prediction
-                pred_prob = y_pred_prob[idx]
+                true_label = mapping_class[int(labels[image_num])]
+                
+                # Get prediction following exact notebook approach
+                [[pred_prob]] = self.model.predict(img.reshape(1, *IMAGE_SIZE, -1))
                 pred_label = mapping_class[int(pred_prob >= threshold)]
+                
                 prob_class = 100 * pred_prob if pred_label == "defect" else 100 * (1 - pred_prob)
                 
-                axes[i].imshow(img.squeeze(), cmap="gray")
-                axes[i].set_title(f"TRUE LABEL: {true_label}", fontweight="bold", fontsize=14)
-                axes[i].set_xlabel(
+                ax.set_title(f"TRUE LABEL: {true_label}", fontweight="bold", fontsize=18)
+                ax.set_xlabel(
                     f"PREDICTED LABEL: {pred_label}\nProb({pred_label}) = {prob_class:.2f}%",
-                    fontweight="bold", fontsize=12, color="red"
+                    fontweight="bold", fontsize=15,
+                    color="blue" if true_label == pred_label else "red"
                 )
-                axes[i].set_xticks([])
-                axes[i].set_yticks([])
+                
+                ax.set_xticks([])
+                ax.set_yticks([])
                 
             except Exception as e:
-                print(f"Error visualizing sample {idx}: {e}")
-                axes[i].axis('off')
-        
-        # Hide unused subplots
-        for i in range(num_samples, len(axes)):
-            axes[i].axis('off')
+                print(f"Error visualizing misclassified sample: {e}")
+                ax.axis('off')
         
         plt.tight_layout()
         fig.suptitle(
-            f"MISCLASSIFIED TEST IMAGES ({len(misclassified_indices)} total)",
-            size=16, y=1.03, fontweight="bold"
+            f"MISCLASSIFIED TEST IMAGES ({len(misclassify_pred)} out of {len(test_dataset.classes)})",
+            size=20, y=1.03, fontweight="bold"
         )
         
         # Save visualization
@@ -342,9 +339,9 @@ class ModelEvaluator:
         
         print(f"📊 Misclassified samples visualization saved: {misc_path}")
 
-def evaluate_model_notebook_style(model_path, data_dir, config):
+def evaluate_model_style(model_path, data_dir, config):
     """
-    Evaluate model following notebook approach.
+    Evaluate model with comprehensive metrics.
     
     Args:
         model_path: Path to trained model (.h5 file)

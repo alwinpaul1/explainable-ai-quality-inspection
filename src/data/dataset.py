@@ -98,7 +98,7 @@ def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123
 
 def analyze_data_distribution(train_dataset, validation_dataset, test_dataset, save_plots=True, save_dir='results/reports'):
     """
-    Analyze and display data distribution following notebook approach.
+    Analyze and display data distribution.
     
     Args:
         train_dataset: Training dataset
@@ -139,7 +139,7 @@ def analyze_data_distribution(train_dataset, validation_dataset, test_dataset, s
     print("📊 IMAGE DATA PROPORTION:")
     print(data_crosstab)
     
-    # Create visualization following notebook style
+    # Create visualization
     if save_plots:
         os.makedirs(save_dir, exist_ok=True)
         
@@ -207,9 +207,9 @@ def get_data_loaders(data_dir, batch_size=64, num_workers=0, val_split=0.2):
     )
     return train_dataset, validation_dataset
 
-def visualize_image_batch(dataset, title, mapping_class={0: "ok", 1: "defect"}):
+def visualizeImageBatch(dataset, title, mapping_class={0: "ok", 1: "defect"}):
     """
-    Visualize a batch of images.
+    Visualize a batch of images using exact implementation.
     
     Args:
         dataset: TensorFlow dataset
@@ -222,24 +222,17 @@ def visualize_image_batch(dataset, title, mapping_class={0: "ok", 1: "defect"}):
     import matplotlib.pyplot as plt
     
     images, labels = next(iter(dataset))
-    batch_size = len(images)
-    image_size = images.shape[1:3]
+    BATCH_SIZE = len(images)
+    IMAGE_SIZE = (300, 300)
     
-    # Determine grid size
-    grid_size = int(np.ceil(np.sqrt(batch_size)))
-    if batch_size <= 16:
-        rows, cols = 4, 4
-    else:
-        rows = cols = 8
+    # Reshape images following exact approach
+    images = images.reshape(BATCH_SIZE, *IMAGE_SIZE)
     
-    fig, axes = plt.subplots(rows, cols, figsize=(16, 16))
+    # Create 8x8 grid following exact implementation
+    fig, axes = plt.subplots(8, 8, figsize=(16, 16))
     
-    for i, (ax, img, label) in enumerate(zip(axes.flat, images, labels)):
-        if i >= batch_size:
-            ax.axis("off")
-            continue
-            
-        ax.imshow(img.squeeze(), cmap="gray")
+    for ax, img, label in zip(axes.flat, images, labels):
+        ax.imshow(img, cmap="gray")
         ax.axis("off")
         ax.set_title(mapping_class[int(label)], size=20)
     
@@ -248,6 +241,38 @@ def visualize_image_batch(dataset, title, mapping_class={0: "ok", 1: "defect"}):
     plt.show()
     
     return images
+
+def visualize_detailed_image(train_images, image_index=4, start_pixel=(75, 75), size=25):
+    """
+    Visualize detailed image by pixel values following exact implementation.
+    
+    Args:
+        train_images: Array of training images
+        image_index: Index of image to visualize
+        start_pixel: Starting pixel coordinates (x, y)
+        size: Size of the detail window (25x25)
+    """
+    import matplotlib.pyplot as plt
+    
+    img = np.squeeze(train_images[image_index])[start_pixel[0]:start_pixel[0]+size, 
+                                               start_pixel[1]:start_pixel[1]+size]
+    
+    fig = plt.figure(figsize=(15, 15))
+    ax = fig.add_subplot(111)
+    ax.imshow(img, cmap="gray")
+    ax.axis("off")
+    
+    w, h = img.shape
+    for x in range(w):
+        for y in range(h):
+            value = img[x][y]
+            ax.annotate("{:.2f}".format(value), xy=(y, x),
+                        horizontalalignment="center",
+                        verticalalignment="center",
+                        color="white" if value < 0.4 else "black")
+    
+    plt.tight_layout()
+    plt.show()
 
 class QualityInspectionDataset:
     """

@@ -14,7 +14,7 @@ from tensorflow import keras
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.data.dataset import get_data_generators, analyze_data_distribution
-from src.training.train_model import train_model_notebook_style, QualityInspectionTrainer
+from src.training.train_model import train_model_style, QualityInspectionTrainer
 from src.evaluation.evaluate_model import ModelEvaluator
 from src.explainability.explain_model import ModelExplainer
 
@@ -151,16 +151,16 @@ def install_kaggle_api():
 
 
 def train_model(config):
-    """Train the quality inspection model following notebook approach."""
-    return train_model_notebook_style(config)
+    """Train the quality inspection model."""
+    return train_model_style(config)
 
 def evaluate_model(model_path, data_dir, config):
-    """Evaluate the trained model following notebook approach."""
+    """Evaluate the trained model."""
     print("\n" + "="*60)
-    print("TESTING ON UNSEEN IMAGES (Following Notebook)")
+    print("TESTING ON UNSEEN IMAGES")
     print("="*60)
     
-    # Create evaluator with notebook-style detailed reporting
+    # Create evaluator with detailed reporting
     evaluator = ModelEvaluator(
         model_path=model_path,
         model_type=config.get('model_type', 'simple'),
@@ -175,7 +175,7 @@ def evaluate_model(model_path, data_dir, config):
         )
         print(f"✅ Test dataset loaded: {test_dataset.samples} samples")
         
-        # Add data distribution analysis following notebook
+        # Add data distribution analysis
         print("\n📊 ANALYZING DATA DISTRIBUTION:")
         analyze_data_distribution(train_dataset, validation_dataset, test_dataset, 
                                 save_plots=True, save_dir='results/reports')

@@ -76,7 +76,7 @@ class QualityInspectionTrainer:
         print(f"- Images per epoch: {steps_per_epoch * train_dataset.batch_size}")
         
         # Setup model checkpoint following notebook
-        model_path = os.path.join(self.config['save_dir'], 'cnn_casting_inspection_model.h5')
+        model_path = os.path.join(self.config['save_dir'], 'cnn_casting_inspection_model.hdf5')
         checkpoint = ModelCheckpoint(
             model_path,
             verbose=1,
@@ -273,11 +273,15 @@ def train_model_notebook_style(config):
         print(data_crosstab)
         
         # Visualize sample images
-        from src.data.dataset import visualize_image_batch
-        visualize_image_batch(
+        from src.data.dataset import visualizeImageBatch, visualize_detailed_image
+        train_images = visualizeImageBatch(
             train_dataset, 
             "FIRST BATCH OF THE TRAINING IMAGES\n(WITH DATA AUGMENTATION)"
         )
+        
+        # Visualize detailed image pixels
+        print("Visualizing detailed image pixels (25x25 window):")
+        visualize_detailed_image(train_images, image_index=4, start_pixel=(75, 75), size=25)
         
     except Exception as e:
         print(f"❌ Error creating data generators: {e}")
@@ -289,7 +293,7 @@ def train_model_notebook_style(config):
     # Train model
     best_model_path = trainer.train(train_dataset, validation_dataset)
     
-    # Evaluate on test data following notebook
+    # Evaluate on test data
     if test_dataset is not None:
         results = trainer.evaluate_on_test(test_dataset)
         
@@ -307,7 +311,7 @@ def train_model_notebook_style(config):
         print(f"📊 Evaluation results saved: {eval_path}")
     
     print("\n" + "="*70)
-    print("🎉 NOTEBOOK-STYLE TRAINING COMPLETED!")
+    print("🎉 TRAINING COMPLETED!")
     print("="*70)
     
     return best_model_path
