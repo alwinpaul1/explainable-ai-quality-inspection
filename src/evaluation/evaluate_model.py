@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tensorflow import keras
-from sklearn.metrics import confusion_matrix, classification_report, roc_curve, auc
+from sklearn.metrics import confusion_matrix, classification_report, roc_curve, auc, precision_score, recall_score, f1_score
 
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -73,10 +73,24 @@ class ModelEvaluator:
         y_pred_class = (y_pred_prob >= threshold).reshape(-1,)
         y_true_class = test_dataset.classes[test_dataset.index_array]
         
-        # Calculate accuracy
+        # Calculate detailed metrics following notebook
         accuracy = np.mean(y_true_class == y_pred_class)
+        precision = precision_score(y_true_class, y_pred_class)
+        recall = recall_score(y_true_class, y_pred_class)
+        f1 = f1_score(y_true_class, y_pred_class)
         
-        print(f"\n🎯 Test Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+        print(f"\n🎯 DETAILED TEST RESULTS (Following Notebook):")
+        print(f"📊 Accuracy: {accuracy*100:.2f}%")
+        print(f"📊 Precision: {precision*100:.2f}%")
+        print(f"📊 Recall: {recall*100:.2f}%")
+        print(f"📊 F1 Score: {f1*100:.2f}%")
+        
+        # Add notebook-style summary message
+        print(f"\n✨ On test dataset, the model achieves a very good result as follow:")
+        print(f"   • Accuracy: {accuracy*100:.2f}%")
+        print(f"   • Recall: {recall*100:.2f}%")
+        print(f"   • Precision: {precision*100:.2f}%")
+        print(f"   • F1 score: {f1*100:.2f}%")
         
         # Create confusion matrix following notebook format
         cm = confusion_matrix(y_true_class, y_pred_class)
@@ -100,6 +114,10 @@ class ModelEvaluator:
             self._plot_confusion_matrix(cm, save_dir)
             self._plot_roc_curve(y_true_class, y_pred_prob, save_dir)
         
+        # Add "Visualize Results" section following notebook
+        if save_plots:
+            self._visualize_results(test_dataset, y_pred_prob, threshold, save_dir)
+        
         # Analyze misclassified samples following notebook
         misclassified_indices = np.where(y_pred_class != y_true_class)[0]
         print(f"\n🔍 Misclassified samples: {len(misclassified_indices)} out of {len(y_true_class)}")
@@ -108,9 +126,12 @@ class ModelEvaluator:
             self._visualize_misclassified(test_dataset, misclassified_indices, 
                                         y_pred_prob, threshold, save_dir)
         
-        # Prepare results dictionary
+        # Prepare results dictionary with detailed metrics
         results = {
             'accuracy': float(accuracy),
+            'precision': float(precision),
+            'recall': float(recall),
+            'f1_score': float(f1),
             'confusion_matrix': cm,
             'y_true': y_true_class,
             'y_pred': y_pred_class,
@@ -125,7 +146,16 @@ class ModelEvaluator:
         with open(results_file, 'w') as f:
             f.write("MODEL EVALUATION RESULTS\n")
             f.write("="*50 + "\n\n")
-            f.write(f"Test Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)\n\n")
+            f.write(f"DETAILED TEST RESULTS (Following Notebook):\n")
+            f.write(f"Accuracy: {accuracy*100:.2f}%\n")
+            f.write(f"Precision: {precision*100:.2f}%\n")
+            f.write(f"Recall: {recall*100:.2f}%\n")
+            f.write(f"F1 Score: {f1*100:.2f}%\n\n")
+            f.write(f"On test dataset, the model achieves a very good result as follow:\n")
+            f.write(f"• Accuracy: {accuracy*100:.2f}%\n")
+            f.write(f"• Recall: {recall*100:.2f}%\n")
+            f.write(f"• Precision: {precision*100:.2f}%\n")
+            f.write(f"• F1 score: {f1*100:.2f}%\n\n")
             f.write("Confusion Matrix:\n")
             f.write(str(cm_df) + "\n\n")
             f.write("Classification Report:\n")
@@ -201,6 +231,53 @@ class ModelEvaluator:
         plt.show()
         
         print(f"📊 ROC curve saved: {roc_path}")
+    
+    def _visualize_results(self, test_dataset, y_pred_prob, threshold, save_dir):
+        """Visualize results comparing true vs predicted labels with probabilities (following notebook)."""
+        mapping_class = {0: "ok", 1: "defect"}
+        
+        # Get first batch of test images
+        images, labels = next(iter(test_dataset))
+        batch_size = len(images)
+        
+        # Create 4x4 grid (16 images) following notebook style
+        fig, axes = plt.subplots(4, 4, figsize=(16, 16))
+        
+        for i, (ax, img, label) in enumerate(zip(axes.flat, images, labels)):
+            if i >= 16:  # Only show first 16 images
+                break
+                
+            ax.imshow(img.squeeze(), cmap="gray")
+            true_label = mapping_class[int(label)]
+            
+            # Get prediction for this specific image
+            pred_prob = self.model.predict(img.reshape(1, *img.shape), verbose=0)[0][0]
+            pred_label = mapping_class[int(pred_prob >= threshold)]
+            
+            prob_class = 100 * pred_prob if pred_label == "defect" else 100 * (1 - pred_prob)
+            
+            ax.set_title(f"TRUE LABEL: {true_label}", fontweight="bold", fontsize=18)
+            ax.set_xlabel(
+                f"PREDICTED LABEL: {pred_label}\nProb({pred_label}) = {prob_class:.2f}%",
+                fontweight="bold", fontsize=15,
+                color="blue" if true_label == pred_label else "red"
+            )
+            
+            ax.set_xticks([])
+            ax.set_yticks([])
+        
+        plt.tight_layout()
+        fig.suptitle(
+            "TRUE VS PREDICTED LABEL FOR 16 RANDOM TEST IMAGES", 
+            size=30, y=1.03, fontweight="bold"
+        )
+        
+        # Save visualization
+        results_path = os.path.join(save_dir, 'test_predictions.png')
+        plt.savefig(results_path, dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        print(f"📊 Test predictions visualization saved: {results_path}")
     
     def _visualize_misclassified(self, test_dataset, misclassified_indices, 
                                y_pred_prob, threshold, save_dir):

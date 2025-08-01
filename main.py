@@ -13,8 +13,9 @@ from tensorflow import keras
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.data.dataset import get_data_generators
+from src.data.dataset import get_data_generators, analyze_data_distribution
 from src.training.train_model import train_model_notebook_style, QualityInspectionTrainer
+from src.evaluation.evaluate_model import ModelEvaluator
 from src.explainability.explain_model import ModelExplainer
 
 def setup_directories():
@@ -154,36 +155,38 @@ def train_model(config):
     return train_model_notebook_style(config)
 
 def evaluate_model(model_path, data_dir, config):
-    """Evaluate the trained model using TensorFlow/Keras."""
+    """Evaluate the trained model following notebook approach."""
     print("\n" + "="*60)
-    print("EVALUATION PHASE (NOTEBOOK STYLE)")
+    print("TESTING ON UNSEEN IMAGES (Following Notebook)")
     print("="*60)
     
-    # Load the trained model
-    try:
-        model = keras.models.load_model(model_path)
-        print(f"✅ Model loaded from: {model_path}")
-    except Exception as e:
-        print(f"❌ Error loading model: {e}")
-        return None
+    # Create evaluator with notebook-style detailed reporting
+    evaluator = ModelEvaluator(
+        model_path=model_path,
+        model_type=config.get('model_type', 'simple'),
+        num_classes=config.get('num_classes', 1)
+    )
     
-    # Create test data generator
+    # Load test data
     try:
-        _, _, test_dataset = get_data_generators(
+        train_dataset, validation_dataset, test_dataset = get_data_generators(
             data_dir=data_dir,
             batch_size=config.get('batch_size', 64)
         )
         print(f"✅ Test dataset loaded: {test_dataset.samples} samples")
+        
+        # Add data distribution analysis following notebook
+        print("\n📊 ANALYZING DATA DISTRIBUTION:")
+        analyze_data_distribution(train_dataset, validation_dataset, test_dataset, 
+                                save_plots=True, save_dir='results/reports')
+        
     except Exception as e:
         print(f"❌ Error loading test data: {e}")
         return None
     
-    # Create trainer instance for evaluation
-    trainer = QualityInspectionTrainer(config)
-    trainer.model = model  # Use the loaded model
-    
-    # Evaluate on test dataset
-    results = trainer.evaluate_on_test(test_dataset, threshold=0.5)
+    # Comprehensive evaluation with visualization
+    results = evaluator.evaluate(test_dataset, threshold=0.5, save_plots=True, 
+                               save_dir='results/reports')
     
     return results
 
