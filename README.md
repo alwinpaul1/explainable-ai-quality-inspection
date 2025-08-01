@@ -196,8 +196,6 @@ python main.py --mode full \
     --steps-per-epoch 200 \
     --validation-steps 150
 
-# GPU acceleration (auto-detected)
-python main.py --mode full --download-data --gpu --epochs 25
 ```
 
 ---
