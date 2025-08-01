@@ -26,7 +26,7 @@ class ModelExplainer:
     def __init__(self, model_path, model_type='simple', num_classes=1):
         """
         Args:
-            model_path: Path to trained Keras model (.hdf5 file)
+            model_path: Path to trained Keras model (.keras file)
             model_type: Type of model architecture (only 'simple' supported)
             num_classes: Number of classes (1 for binary classification)
         """
@@ -666,7 +666,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Explain TensorFlow model predictions')
-    parser.add_argument('--model-path', required=True, help='Path to trained Keras model (.hdf5)')
+    parser.add_argument('--model-path', required=True, help='Path to trained Keras model (.keras)')
     parser.add_argument('--image-path', required=True, help='Path to image to explain')
     parser.add_argument('--model-type', default='simple', help='Model architecture (simple only)')
     parser.add_argument('--methods', nargs='+', 

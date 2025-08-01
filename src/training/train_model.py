@@ -76,7 +76,7 @@ class QualityInspectionTrainer:
         print(f"- Images per epoch: {steps_per_epoch * train_dataset.batch_size}")
         
         # Setup model checkpoint
-        model_path = os.path.join(self.config['save_dir'], 'cnn_casting_inspection_model.hdf5')
+        model_path = os.path.join(self.config['save_dir'], 'cnn_casting_inspection_model.keras')
         checkpoint = ModelCheckpoint(
             model_path,
             verbose=1,

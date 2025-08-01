@@ -22,7 +22,7 @@ class ModelEvaluator:
     def __init__(self, model_path, model_type='simple', num_classes=1):
         """
         Args:
-            model_path: Path to trained Keras model (.h5 file)
+            model_path: Path to trained Keras model (.keras file)
             model_type: Model architecture type (only 'simple' supported)
             num_classes: Number of classes (1 for binary with sigmoid)
         """
@@ -344,7 +344,7 @@ def evaluate_model_style(model_path, data_dir, config):
     Evaluate model with comprehensive metrics.
     
     Args:
-        model_path: Path to trained model (.h5 file)
+        model_path: Path to trained model (.keras file)
         data_dir: Path to data directory
         config: Configuration dictionary
         
