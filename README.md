@@ -87,7 +87,7 @@ explainable-ai-quality-inspection/
 ├── main.py                      # 🚀 Main CLI entry point (download, train, evaluate, explain)
 ├── requirements.txt             # 📦 Python dependencies (TensorFlow, LIME, SHAP, etc.)
 ├── CLAUDE.md                   # 🤖 Project instructions and development guide
-├── src/
+├── src/                        # 📁 Core source code modules
 │   ├── data/
 │   │   └── dataset.py          # 📊 Kaggle dataset integration & TensorFlow generators
 │   ├── models/
@@ -96,11 +96,8 @@ explainable-ai-quality-inspection/
 │   │   └── train_model.py      # 🔥 Training pipeline with ModelCheckpoint
 │   ├── evaluation/
 │   │   └── evaluate_model.py   # 📈 Model evaluation and metrics
-│   ├── explainability/
-│   │   └── explain_model.py    # 🔍 LIME/SHAP explanations for TensorFlow
-│   └── utils/
-│       ├── metrics.py          # 📊 Evaluation metrics calculations
-│       └── visualization.py    # 📈 Plotting utilities
+│   └── explainability/
+│       └── explain_model.py    # 🔍 LIME/SHAP explanations for TensorFlow
 ├── data/                       # 📁 Auto-downloaded dataset directory
 │   └── casting_data/           # 🏭 Real casting product images
 │       └── casting_data/       # 📂 Main dataset directory (7,348 images)
@@ -125,8 +122,8 @@ explainable-ai-quality-inspection/
 | `main.py` | CLI pipeline | `download_dataset()`, modes: full/train/evaluate/explain |
 | `src/data/dataset.py` | Data handling | `get_data_generators()`, production-optimized parameters |
 | `src/models/cnn_model.py` | Model creation | `create_simple_cnn()`, 32→16 Conv2D architecture |
-| `src/training/train_model.py` | Training logic | `QualityInspectionTrainer`, `train_model_production_style()` |
-| `src/evaluation/evaluate_model.py` | Evaluation | `ModelEvaluator`, confusion matrices, ROC curves |
+| `src/training/train_model.py` | Training logic | `QualityInspectionTrainer`, `train_model_notebook_style()` |
+| `src/evaluation/evaluate_model.py` | Evaluation | Model evaluation with confusion matrices, ROC curves |
 | `src/explainability/explain_model.py` | Explanations | `ModelExplainer`, LIME/SHAP for TensorFlow models |
 
 ## 🛠️ Environment Setup
@@ -355,14 +352,14 @@ python -m src.explainability.explain_model \
 
 ## ⚠️ **Important Notes**
 
-### 🚫 **Dashboard Removed**
-The Streamlit dashboard has been **intentionally removed** from this implementation to focus on:
-- **Core Pipeline**: Training, evaluation, and explanation functionality
-- **Production Focus**: Command-line interface for automated deployments  
-- **Optimized Architecture**: Streamlined CNN designed for industrial applications
-- **Simplified Dependencies**: Reduced package requirements for easier deployment
+### 🎯 **Streamlined Architecture**
+This implementation focuses on **core functionality** with a clean, minimal codebase:
+- **Production-Ready Pipeline**: Single CLI entry point for all operations
+- **Optimized CNN**: Simple but effective architecture for industrial casting defect detection
+- **Real Dataset Integration**: Seamless Kaggle dataset download and processing
+- **TensorFlow/Keras Focus**: Modern deep learning framework with .h5 model format
 
-### 🎯 **CLI-First Approach**
+### 🚀 **CLI-First Approach**
 All functionality is accessible through the main CLI:
 ```bash
 # Complete pipeline with visualization
@@ -482,14 +479,14 @@ ls -la results/models/cnn_casting_inspection_model.h5
 python -c "import tensorflow as tf; model = tf.keras.models.load_model('results/models/cnn_casting_inspection_model.h5'); print('Model loaded successfully')"
 ```
 
-#### Dashboard Issues
+#### Web Interface Issues
 ```bash
-# Port conflicts
+# If you need to run a web interface in the future:
+# Port conflicts check
 lsof -i :8501
-streamlit run dashboard/app.py --server.port 8502
 
-# Clear Streamlit cache
-rm -rf ~/.streamlit/
+# Clear browser cache if needed
+# (Currently no web interface - CLI only)
 ```
 
 #### Dataset Issues
