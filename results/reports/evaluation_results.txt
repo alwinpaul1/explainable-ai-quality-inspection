@@ -1,0 +1,34 @@
+MODEL EVALUATION RESULTS
+==================================================
+
+DETAILED TEST RESULTS (Following Notebook):
+Accuracy: 53.71%
+Precision: 63.62%
+Recall: 62.91%
+F1 Score: 63.26%
+
+On test dataset, the model achieves a very good result as follow:
+• Accuracy: 53.71%
+• Recall: 62.91%
+• Precision: 63.62%
+• F1 score: 63.26%
+
+Confusion Matrix:
+              Predicted       
+                     ok defect
+Actual ok            99    163
+       defect       168    285
+
+Classification Report:
+              precision    recall  f1-score   support
+
+          ok     0.3708    0.3779    0.3743       262
+      defect     0.6362    0.6291    0.6326       453
+
+    accuracy                         0.5371       715
+   macro avg     0.5035    0.5035    0.5035       715
+weighted avg     0.5389    0.5371    0.5380       715
+
+
+Misclassified samples: 331 out of 715
+Classification threshold: 0.5
