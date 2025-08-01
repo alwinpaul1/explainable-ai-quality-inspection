@@ -13,10 +13,9 @@ from tensorflow import keras
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.data.dataset import get_data_generators, QualityInspectionDataset
+from src.data.dataset import get_data_generators
 from src.training.train_model import train_model_notebook_style, QualityInspectionTrainer
 from src.explainability.explain_model import ModelExplainer
-from src.evaluation.evaluate_model import ModelEvaluator
 
 def setup_directories():
     """Create necessary directories."""
@@ -33,7 +32,6 @@ def download_dataset(data_dir='data'):
     """Download casting dataset using Kaggle API only."""
     from pathlib import Path
     import subprocess
-    import sys
     
     print("🔽 Downloading Casting Product Image Dataset...")
     
