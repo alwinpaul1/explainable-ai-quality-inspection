@@ -204,12 +204,6 @@ python main.py --mode full --download-data --gpu --epochs 25
 
 ## 📊 Results & Outputs
 
-### **Model Performance**
-- **Accuracy**: 99.44% on test set
-- **Precision**: 99.34% (minimal false positives)
-- **Recall**: 99.78% (minimal false negatives)  
-- **F1 Score**: 99.56% (balanced performance)
-- **ROC AUC**: 99.9+ (excellent discrimination)
 
 ### **📁 Generated Artifacts**
 
