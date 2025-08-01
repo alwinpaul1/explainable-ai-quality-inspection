@@ -8,10 +8,10 @@ Automated defect detection for industrial casting products using TensorFlow/Kera
 
 This project solves **industrial quality inspection** for casting products using AI:
 
-- **🏭 Real Dataset**: 7,348 casting product images (defective vs good quality)
-- **🤖 CNN Model**: Simple but effective architecture achieving 98%+ accuracy
-- **🔍 Explainable AI**: LIME and SHAP explanations to understand model decisions
-- **⚡ Automated Pipeline**: Single command downloads data, trains model, and generates results
+- **Real Dataset**: 7,348 casting product images (defective vs good quality)
+- **CNN Model**: Simple but effective architecture achieving 98%+ accuracy
+- **Explainable AI**: LIME and SHAP explanations to understand model decisions
+- **Automated Pipeline**: Single command downloads data, trains model, and generates results
 
 **Problem Solved**: Automatically detect defective casting products in manufacturing, with explanations for why the AI made each decision.
 
@@ -19,35 +19,64 @@ This project solves **industrial quality inspection** for casting products using
 
 ```
 explainable-ai-quality-inspection/
-├── main.py                     # 🚀 Main CLI entry point - run entire pipeline
-├── requirements.txt            # 📦 Python dependencies
-├── CLAUDE.md                   # 🤖 Development guide
-├── src/                        # 📁 Source code modules
+├── main.py                     # Main CLI entry point - run entire pipeline
+├── requirements.txt            # Python dependencies
+├── CLAUDE.md                   # Development guide
+├── src/                        # Source code modules
 │   ├── data/
-│   │   └── dataset.py         # 📊 Kaggle dataset integration & TensorFlow data generators
+│   │   └── dataset.py         # Kaggle dataset integration & TensorFlow data generators
 │   ├── models/
-│   │   └── cnn_model.py       # 🧠 Simple CNN architecture (Sequential model)
+│   │   └── cnn_model.py       # Simple CNN architecture (Sequential model)
 │   ├── training/
-│   │   └── train_model.py     # 🔥 Training pipeline with ModelCheckpoint
+│   │   └── train_model.py     # Training pipeline with ModelCheckpoint
 │   ├── evaluation/
-│   │   └── evaluate_model.py  # 📈 Model evaluation, confusion matrices, ROC curves
+│   │   └── evaluate_model.py  # Model evaluation, confusion matrices, ROC curves
 │   └── explainability/
-│       └── explain_model.py   # 🔍 LIME/SHAP explanations for TensorFlow models
-├── data/                      # 📁 Dataset (auto-downloaded)
+│       └── explain_model.py   # LIME/SHAP explanations for TensorFlow models
+├── data/                      # Dataset (auto-downloaded)
 │   └── casting_data/
-│       └── casting_data/      # 📂 7,348 casting product images
+│       └── casting_data/      # 7,348 casting product images
 │           ├── train/
-│           │   ├── ok_front/  # ✅ Good quality products (training)
-│           │   └── def_front/ # ❌ Defective products (training)
+│           │   ├── ok_front/  # Good quality products (training)
+│           │   └── def_front/ # Defective products (training)
 │           └── test/
-│               ├── ok_front/  # ✅ Good quality products (testing)
-│               └── def_front/ # ❌ Defective products (testing)
-└── results/                   # 📈 Generated outputs
-    ├── models/                # 🤖 Trained Keras models (.h5 files)
-    ├── logs/                  # 📊 Training history, curves, predictions
-    ├── explanations/          # 🔍 LIME/SHAP explanation images
-    └── reports/               # 📋 Evaluation reports, confusion matrices
+│               ├── ok_front/  # Good quality products (testing)
+│               └── def_front/ # Defective products (testing)
+└── results/                   # Generated outputs
+    ├── models/                # Trained Keras models (.h5 files)
+    ├── logs/                  # Training history, curves, predictions
+    ├── explanations/          # LIME/SHAP explanation images
+    └── reports/               # Evaluation reports, confusion matrices
 ```
+
+### CNN Architecture
+
+The model uses a simple but effective Sequential CNN architecture:
+
+```python
+Sequential([
+    # First convolutional block
+    Conv2D(32, kernel_size=3, strides=2, activation='relu'),  # 32 filters
+    MaxPooling2D(pool_size=2, strides=2),
+    
+    # Second convolutional block  
+    Conv2D(16, kernel_size=3, strides=2, activation='relu'),  # 16 filters
+    MaxPooling2D(pool_size=2, strides=2),
+    
+    # Fully connected layers
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.2),
+    Dense(64, activation='relu'), 
+    Dropout(0.2),
+    Dense(1, activation='sigmoid')  # Binary classification
+])
+```
+
+**Input**: 300x300 grayscale images  
+**Output**: Sigmoid probability (0 = good quality, 1 = defective)  
+**Total Parameters**: ~1.2M parameters  
+**Training**: Adam optimizer, binary crossentropy loss
 
 ### Key Files Explained
 
@@ -107,7 +136,7 @@ python main.py --mode explain --model-path results/models/cnn_casting_inspection
 
 ## Results
 
-After training, you'll get:
+After training, the following outputs are generated:
 - **Trained model**: `results/models/cnn_casting_inspection_model.h5`
 - **Training plots**: `results/logs/training_curves.png` and `results/logs/test_predictions.png`
 - **Evaluation reports**: `results/reports/evaluation_results.txt`, confusion matrices, ROC curves
