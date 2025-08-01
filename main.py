@@ -207,22 +207,35 @@ def explain_predictions(model_path, data_dir, config, num_samples=5):
     try:
         _, _, test_dataset = get_data_generators(data_dir, batch_size=32)
         
-        # Get actual test directory path
-        test_dir = os.path.join(data_dir, 'test')
-        val_dir = os.path.join(data_dir, 'val')
+        # Get actual test directory path following dataset structure
+        casting_data_dir = os.path.join(data_dir, 'casting_data', 'casting_data')
+        test_dir = os.path.join(casting_data_dir, 'test')
+        val_dir = os.path.join(casting_data_dir, 'val')
         
-        # Use val dir if test doesn't exist
-        actual_test_dir = val_dir if not os.path.exists(test_dir) and os.path.exists(val_dir) else test_dir
-        print(f"Using test samples from: {actual_test_dir}")
+        # Try test dir first, fallback to val dir if needed
+        if os.path.exists(test_dir):
+            actual_test_dir = test_dir
+            print(f"Using test samples from: {actual_test_dir}")
+        elif os.path.exists(val_dir):
+            actual_test_dir = val_dir  
+            print(f"Using validation samples for explanation from: {actual_test_dir}")
+        else:
+            # Fallback to train dir for demonstration
+            train_dir = os.path.join(casting_data_dir, 'train')
+            actual_test_dir = train_dir
+            print(f"Using training samples for explanation from: {actual_test_dir}")
         
-        # Get sample file paths directly from filesystem
+        # Get sample file paths using actual class names from dataset
         sample_paths = []
-        for class_name in ['ok', 'defective']:
+        for class_name in ['ok_front', 'def_front']:
             class_dir = os.path.join(actual_test_dir, class_name)
             if os.path.exists(class_dir):
-                for filename in os.listdir(class_dir)[:num_samples//2]:  # Split samples between classes
-                    if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
-                        sample_paths.append(os.path.join(class_dir, filename))
+                files = [f for f in os.listdir(class_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+                for filename in files[:max(1, num_samples//2)]:  # At least 1 sample per class
+                    sample_paths.append(os.path.join(class_dir, filename))
+                print(f"Found {len(files)} images in {class_name}, using {min(len(files), max(1, num_samples//2))}")
+            else:
+                print(f"Class directory not found: {class_dir}")
         
         # Explain samples
         for i, sample_path in enumerate(sample_paths[:num_samples]):
@@ -233,7 +246,7 @@ def explain_predictions(model_path, data_dir, config, num_samples=5):
             try:
                 explainer.explain_image(
                     sample_path,
-                    methods=['lime', 'shap', 'gradcam'],  # Changed from integrated_gradients to shap
+                    methods=['lime', 'shap', 'gradcam', 'integrated_gradients'],
                     save_path=save_path
                 )
                 print(f"Explanation saved to: {save_path}")
