@@ -15,6 +15,51 @@ This project solves **industrial quality inspection** for casting products using
 
 **Problem Solved**: Automatically detect defective casting products in manufacturing, with explanations for why the AI made each decision.
 
+## Project Structure
+
+```
+explainable-ai-quality-inspection/
+├── main.py                     # 🚀 Main CLI entry point - run entire pipeline
+├── requirements.txt            # 📦 Python dependencies
+├── CLAUDE.md                   # 🤖 Development guide
+├── src/                        # 📁 Source code modules
+│   ├── data/
+│   │   └── dataset.py         # 📊 Kaggle dataset integration & TensorFlow data generators
+│   ├── models/
+│   │   └── cnn_model.py       # 🧠 Simple CNN architecture (Sequential model)
+│   ├── training/
+│   │   └── train_model.py     # 🔥 Training pipeline with ModelCheckpoint
+│   ├── evaluation/
+│   │   └── evaluate_model.py  # 📈 Model evaluation, confusion matrices, ROC curves
+│   └── explainability/
+│       └── explain_model.py   # 🔍 LIME/SHAP explanations for TensorFlow models
+├── data/                      # 📁 Dataset (auto-downloaded)
+│   └── casting_data/
+│       └── casting_data/      # 📂 7,348 casting product images
+│           ├── train/
+│           │   ├── ok_front/  # ✅ Good quality products (training)
+│           │   └── def_front/ # ❌ Defective products (training)
+│           └── test/
+│               ├── ok_front/  # ✅ Good quality products (testing)
+│               └── def_front/ # ❌ Defective products (testing)
+└── results/                   # 📈 Generated outputs
+    ├── models/                # 🤖 Trained Keras models (.h5 files)
+    ├── logs/                  # 📊 Training history, curves, predictions
+    ├── explanations/          # 🔍 LIME/SHAP explanation images
+    └── reports/               # 📋 Evaluation reports, confusion matrices
+```
+
+### Key Files Explained
+
+| File | Purpose |
+|------|---------|
+| `main.py` | Main CLI - handles data download, training, evaluation, explanations |
+| `src/data/dataset.py` | TensorFlow data generators with augmentation |
+| `src/models/cnn_model.py` | Simple CNN architecture (32→16 Conv2D filters) |
+| `src/training/train_model.py` | Training logic with ModelCheckpoint and visualization |
+| `src/evaluation/evaluate_model.py` | Model evaluation with detailed metrics and plots |
+| `src/explainability/explain_model.py` | LIME and SHAP explanations for model decisions |
+
 ## Installation & Setup
 
 ```bash
