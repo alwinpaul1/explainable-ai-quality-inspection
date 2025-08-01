@@ -1,5 +1,5 @@
 """
-Dataset utilities for quality inspection following notebook approach
+Dataset utilities for quality inspection
 """
 
 import os
@@ -10,10 +10,10 @@ from PIL import Image
 
 def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123):
     """
-    Create data generators following the notebook approach.
+    Create data generators for casting product quality inspection.
     
     Args:
-        data_dir: Root directory containing train and test subdirs
+        data_dir: Root directory containing the casting dataset
         image_size: Target image size (width, height)
         batch_size: Batch size for training
         seed: Random seed for reproducibility
@@ -21,20 +21,21 @@ def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123
     Returns:
         train_dataset, validation_dataset, test_dataset
     """
-    train_path = os.path.join(data_dir, 'train')
-    test_path = os.path.join(data_dir, 'test')
-    val_path = os.path.join(data_dir, 'val')
+    # Use casting_data/casting_data/ as main directory structure
+    my_data_dir = os.path.join(data_dir, 'casting_data', 'casting_data')
+    train_path = os.path.join(my_data_dir, 'train')
+    test_path = os.path.join(my_data_dir, 'test')
     
-    # Use val as test if test doesn't exist
-    if not os.path.exists(test_path) and os.path.exists(val_path):
-        test_path = val_path
-        print(f"Using {val_path} as test directory since test directory doesn't exist")
-    elif not os.path.exists(test_path):
-        # If neither test nor val exists, use train for evaluation (split internally)
-        test_path = train_path
-        print(f"Warning: Using {train_path} as test directory since neither test nor val directory exists")
+    print(f"📁 Using data directory: {my_data_dir}")
+    print(f"📁 Train path: {train_path}")
+    print(f"📁 Test path: {test_path}")
     
-    # Training data generator with augmentation (following notebook)
+    # Production constants
+    IMAGE_SIZE = image_size
+    BATCH_SIZE = batch_size
+    SEED_NUMBER = seed
+    
+    # Training data generator with augmentation
     train_generator = ImageDataGenerator(
         rotation_range=360,
         width_shift_range=0.05,
@@ -51,20 +52,22 @@ def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123
     # Test data generator (no augmentation)
     test_generator = ImageDataGenerator(rescale=1./255)
     
+    # Generator arguments
     gen_args = dict(
-        target_size=image_size,
-        color_mode="grayscale",  # Following notebook approach
-        batch_size=batch_size,
+        target_size=IMAGE_SIZE,
+        color_mode="grayscale",
+        batch_size=BATCH_SIZE,
         class_mode="binary",
-        classes={"ok": 0, "defective": 1},
+        classes={"ok_front": 0, "def_front": 1},
         shuffle=True,
-        seed=seed
+        seed=SEED_NUMBER
     )
     
     try:
+        # Create datasets
         train_dataset = train_generator.flow_from_directory(
             directory=train_path,
-            subset="training",
+            subset="training", 
             **gen_args
         )
         
@@ -74,7 +77,6 @@ def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123
             **gen_args
         )
         
-        # Use test directory for test dataset
         test_dataset = test_generator.flow_from_directory(
             directory=test_path,
             **gen_args
@@ -96,7 +98,7 @@ def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123
 
 def analyze_data_distribution(train_dataset, validation_dataset, test_dataset):
     """
-    Analyze and display data distribution following notebook approach.
+    Analyze and display data distribution.
     
     Args:
         train_dataset: Training dataset
@@ -153,7 +155,7 @@ def get_data_loaders(data_dir, batch_size=64, num_workers=0, val_split=0.2):
 
 def visualize_image_batch(dataset, title, mapping_class={0: "ok", 1: "defect"}):
     """
-    Visualize a batch of images following notebook approach.
+    Visualize a batch of images.
     
     Args:
         dataset: TensorFlow dataset

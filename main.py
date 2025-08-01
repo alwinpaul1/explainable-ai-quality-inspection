@@ -30,11 +30,10 @@ def setup_directories():
         print(f"Created directory: {dir_path}")
 
 def download_dataset(data_dir='data'):
-    """Download and setup casting dataset."""
-    import urllib.request
-    import zipfile
-    import requests
+    """Download casting dataset using Kaggle API only."""
     from pathlib import Path
+    import subprocess
+    import sys
     
     print("🔽 Downloading Casting Product Image Dataset...")
     
@@ -43,109 +42,97 @@ def download_dataset(data_dir='data'):
     data_path.mkdir(parents=True, exist_ok=True)
     
     try:
-        # Try direct download from alternative sources
-        print("📦 Attempting to download dataset...")
+        print("📦 Attempting Kaggle API download...")
         
-        # Alternative download URLs (you may need to find a direct link)
-        urls = [
-            # Add direct download URLs here when available
-            # "https://example.com/casting-dataset.zip",
-        ]
-        
-        download_success = False
-        
-        for i, url in enumerate(urls):
+        # Install kaggle package if not available
+        try:
+            import kaggle
+        except ImportError:
+            print("📦 Installing Kaggle API using uv...")
             try:
-                print(f"🔄 Trying download source {i+1}/{len(urls)}...")
-                
-                # Download file
-                response = requests.get(url, stream=True)
-                response.raise_for_status()
-                
-                zip_path = data_path / 'casting_dataset.zip'
-                
-                # Save with progress
-                total_size = int(response.headers.get('content-length', 0))
-                downloaded = 0
-                
-                with open(zip_path, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if total_size > 0:
-                                percent = (downloaded / total_size) * 100
-                                print(f"\r⬇️  Downloaded: {percent:.1f}%", end='', flush=True)
-                
-                print("\n📦 Extracting dataset...")
-                
-                # Extract zip file
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(data_path)
-                
-                # Clean up zip file
-                zip_path.unlink()
-                
-                # Verify download and structure
-                if verify_casting_dataset_structure(data_dir):
-                    print("✅ Dataset downloaded and verified successfully!")
-                    download_success = True
-                    break
-                else:
-                    print("⚠️ Dataset structure verification failed.")
-                    
-            except Exception as e:
-                print(f"❌ Download from source {i+1} failed: {e}")
-                continue
+                # Use uv pip install in virtual environment
+                subprocess.check_call(["uv", "pip", "install", "kaggle"])
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                raise ImportError("Failed to install kaggle package. Please install manually: uv pip install kaggle")
+            import kaggle
         
-        if not download_success:
-            # Provide manual download instructions
-            print("📋 Automatic download failed. Please download manually:")
-            print("   1. Visit: https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product")
-            print("   2. Download the dataset (requires free Kaggle account)")
-            print("   3. Extract the downloaded zip file")
-            print("   4. Copy the contents to your 'data/' directory")
-            print("   5. Ensure this structure:")
-            print("      data/")
-            print("      ├── train/")
-            print("      │   ├── defective/")
-            print("      │   └── ok/")
-            print("      └── test/")
-            print("          ├── defective/")
-            print("          └── ok/")
-            print("\n   Then run the command again without --download-data")
-            return False
-            
+        # Authenticate Kaggle API
+        kaggle.api.authenticate()
+        
+        # Download the specific dataset
+        dataset_name = "ravirajsinh45/real-life-industrial-dataset-of-casting-product"
+        print(f"⬇️  Downloading: {dataset_name}...")
+        
+        kaggle.api.dataset_download_files(
+            dataset_name, 
+            path=str(data_path), 
+            unzip=True
+        )
+        
+        print("✅ Dataset downloaded and extracted successfully!")
+        print(f"📁 Dataset saved to: {data_path}")
+        
+        # List the contents to show what was downloaded
+        print("\n📋 Downloaded dataset structure:")
+        import os
+        for root, dirs, files in os.walk(data_path):
+            level = root.replace(str(data_path), '').count(os.sep)
+            indent = ' ' * 2 * level
+            print(f"{indent}{os.path.basename(root)}/")
+            subindent = ' ' * 2 * (level + 1)
+            for file in files[:5]:  # Show first 5 files
+                print(f"{subindent}{file}")
+            if len(files) > 5:
+                print(f"{subindent}... and {len(files)-5} more files")
+        
+        return True
+        
     except Exception as e:
-        print(f"❌ Error downloading dataset: {e}")
+        print(f"❌ Kaggle API download failed: {e}")
+        print("💡 Manual download required:")
+        print("   1. Visit: https://www.kaggle.com/datasets/ravirajsinh45/real-life-industrial-dataset-of-casting-product")
+        print("   2. Download the dataset (requires free Kaggle account)")
+        print("   3. Extract the zip file to the 'data/' directory")
+        print("   4. The dataset will keep its original structure")
         return False
-    
-    return download_success
+
 
 def verify_casting_dataset_structure(data_dir):
-    """Verify that the casting dataset has the correct structure."""
+    """Verify that the casting dataset structure exists and has images."""
     from pathlib import Path
     
     data_path = Path(data_dir)
-    required_dirs = [
-        data_path / 'train' / 'ok',
-        data_path / 'train' / 'defective',
-        data_path / 'test' / 'ok',
-        data_path / 'test' / 'defective'
-    ]
     
-    for dir_path in required_dirs:
-        if not dir_path.exists():
-            print(f"❌ Missing directory: {dir_path}")
-            return False
+    if not data_path.exists():
+        print(f"❌ Data directory does not exist: {data_path}")
+        return False
+    
+    # Count total images in the dataset
+    image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.JPG', '*.JPEG', '*.PNG']
+    total_images = 0
+    
+    for ext in image_extensions:
+        total_images += len(list(data_path.rglob(ext)))
+    
+    if total_images == 0:
+        print(f"❌ No images found in: {data_path}")
+        return False
+    
+    print(f"✅ Found {total_images} images in dataset")
+    
+    # Show the actual structure
+    print("📁 Dataset structure:")
+    import os
+    for root, dirs, files in os.walk(data_path):
+        level = root.replace(str(data_path), '').count(os.sep)
+        indent = ' ' * 2 * level
+        print(f"{indent}{os.path.basename(root)}/")
         
-        # Check if directory has images
-        image_files = list(dir_path.glob('*.jpg')) + list(dir_path.glob('*.jpeg')) + list(dir_path.glob('*.png'))
-        if len(image_files) == 0:
-            print(f"❌ No images found in: {dir_path}")
-            return False
-        
-        print(f"✅ Found {len(image_files)} images in {dir_path}")
+        # Count images in this directory
+        image_count = sum(1 for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png')))
+        if image_count > 0:
+            subindent = ' ' * 2 * (level + 1)
+            print(f"{subindent}[{image_count} images]")
     
     return True
 
@@ -275,17 +262,12 @@ def run_complete_pipeline(config):
             return
     else:
         # Check if dataset already exists
-        import os
-        data_exists = (
-            os.path.exists(os.path.join(config['data_dir'], 'train', 'ok')) and
-            os.path.exists(os.path.join(config['data_dir'], 'train', 'defective'))
-        )
-        if data_exists:
+        dataset_ready = verify_casting_dataset_structure(config['data_dir'])
+        if dataset_ready:
             print("✅ Existing dataset found!")
-            dataset_ready = True
         else:
             print("❌ No dataset found. Please use --download-data to download the casting dataset.")
-            print("   Or manually place data in data/train/{ok,defective}/ and data/test/{ok,defective}/")
+            print("   Or manually place the casting dataset in the 'data/' directory")
             return
     
     # Only proceed if we have real data
