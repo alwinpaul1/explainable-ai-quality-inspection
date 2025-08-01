@@ -96,19 +96,24 @@ def get_data_generators(data_dir, image_size=(300, 300), batch_size=64, seed=123
         print("      └── defective/")
         raise
 
-def analyze_data_distribution(train_dataset, validation_dataset, test_dataset):
+def analyze_data_distribution(train_dataset, validation_dataset, test_dataset, save_plots=True, save_dir='results/reports'):
     """
-    Analyze and display data distribution.
+    Analyze and display data distribution following notebook approach.
     
     Args:
         train_dataset: Training dataset
         validation_dataset: Validation dataset
         test_dataset: Test dataset
+        save_plots: Whether to save visualization plots
+        save_dir: Directory to save plots
     
     Returns:
         DataFrame with data distribution
     """
     import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import os
     
     # Create data distribution analysis
     image_data = []
@@ -130,6 +135,55 @@ def analyze_data_distribution(train_dataset, validation_dataset, test_dataset):
         margins=True,
         margins_name="Total"
     )
+    
+    print("📊 IMAGE DATA PROPORTION:")
+    print(data_crosstab)
+    
+    # Create visualization following notebook style
+    if save_plots:
+        os.makedirs(save_dir, exist_ok=True)
+        
+        total_image = data_crosstab.iloc[-1, -1]
+        ax = data_crosstab.iloc[:-1, :-1].T.plot(kind="bar", stacked=True, rot=0, figsize=(10, 6))
+        
+        percent_val = []
+        
+        for rect in ax.patches:
+            height = rect.get_height()
+            width = rect.get_width()
+            percent = 100 * height / total_image
+            
+            ax.text(rect.get_x() + width - 0.25, 
+                    rect.get_y() + height/2, 
+                    int(height), 
+                    ha='center',
+                    va='center',
+                    color="white",
+                    fontsize=10)
+            
+            ax.text(rect.get_x() + width + 0.01, 
+                    rect.get_y() + height/2, 
+                    "{:.2f}%".format(percent), 
+                    ha='left',
+                    va='center',
+                    color="black",
+                    fontsize=10)
+            
+            percent_val.append(percent)
+        
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles=handles, labels=labels)
+        
+        percent_def = sum(percent_val[::2])
+        ax.set_xticklabels([f"def_front\n({percent_def:.2f} %)", f"ok_front\n({100-percent_def:.2f} %)"])
+        plt.title("IMAGE DATA PROPORTION", fontsize=15, fontweight="bold")
+        
+        # Save plot
+        prop_path = os.path.join(save_dir, 'data_proportion.png')
+        plt.savefig(prop_path, dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        print(f"📊 Data proportion visualization saved: {prop_path}")
     
     return data_crosstab
 
