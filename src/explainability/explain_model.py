@@ -7,6 +7,8 @@ import sys
 import numpy as np
 import cv2
 from PIL import Image
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend to prevent display
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
@@ -93,7 +95,7 @@ class ModelExplainer:
         else:
             return predictions
     
-    def explain_with_lime(self, image, num_samples=1000, num_features=10):
+    def explain_with_lime(self, image, num_samples=500, num_features=10):
         """Generate LIME explanation for TensorFlow model."""
         # Preprocess image
         if isinstance(image, str):
@@ -119,6 +121,16 @@ class ModelExplainer:
             image_rgb = image
         
         try:
+            # Add timeout protection for LIME
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError("LIME explanation timed out")
+            
+            # Set timeout for LIME explanation (30 seconds)
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(30)
+            
             explanation = self.lime_explainer.explain_instance(
                 image_rgb,
                 self.predict_fn,
@@ -127,9 +139,30 @@ class ModelExplainer:
                 num_samples=num_samples,
                 num_features=num_features
             )
+            
+            # Cancel timeout
+            signal.alarm(0)
+            
             return explanation
+            
+        except TimeoutError:
+            print("⚠️  LIME explanation timed out, trying with fewer samples...")
+            # Try with fewer samples
+            try:
+                explanation = self.lime_explainer.explain_instance(
+                    image_rgb,
+                    self.predict_fn,
+                    top_labels=2,
+                    hide_color=0,
+                    num_samples=200,  # Reduced samples
+                    num_features=num_features
+                )
+                return explanation
+            except Exception as e:
+                print(f"⚠️  LIME explanation failed with reduced samples: {e}")
+                return None
         except Exception as e:
-            print(f"LIME explanation failed: {e}")
+            print(f"⚠️  LIME explanation failed: {e}")
             return None
     
     def _create_shap_background(self, sample_image):
@@ -614,7 +647,8 @@ class ModelExplainer:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"📊 Explanation saved: {save_path}")
         
-        plt.show()
+        # Close the figure to free memory
+        plt.close(fig)
     
     def explain_image(self, image_path, methods=['lime', 'shap'], save_path=None):
         """Comprehensive explanation of a single image using TensorFlow-compatible methods."""

@@ -7,6 +7,10 @@ import os
 import sys
 import argparse
 
+# Configure matplotlib to use non-interactive backend
+import matplotlib
+matplotlib.use('Agg')
+
 import tensorflow as tf
 from tensorflow import keras
 
@@ -291,7 +295,7 @@ def evaluate_model(model_path, data_dir, config):
     
     return results
 
-def explain_predictions(model_path, data_dir, config, num_samples=5):
+def explain_predictions(model_path, data_dir, config, num_samples=2):
     """Generate explanations for sample predictions."""
     print("\n" + "="*60)
     print("EXPLAINABILITY PHASE")
@@ -338,21 +342,42 @@ def explain_predictions(model_path, data_dir, config, num_samples=5):
             else:
                 print(f"Class directory not found: {class_dir}")
         
-        # Explain samples
+        # Explain samples with better error handling
+        successful_explanations = 0
         for i, sample_path in enumerate(sample_paths[:num_samples]):
             print(f"\nExplaining sample {i+1}: {os.path.basename(sample_path)}")
             
-            save_path = f"results/explanations/explanation_sample_{i+1}.png"
+            save_path = f"results/reports/explanation_sample_{i+1}.png"
             
             try:
+                # Try with all methods first
                 explainer.explain_image(
                     sample_path,
                     methods=['lime', 'shap', 'gradcam', 'integrated_gradients'],
                     save_path=save_path
                 )
-                print(f"Explanation saved to: {save_path}")
+                print(f"✅ Explanation saved to: {save_path}")
+                successful_explanations += 1
+                
             except Exception as e:
-                print(f"Error generating explanation: {e}")
+                print(f"⚠️  Error with all methods: {e}")
+                print("🔄 Trying with simplified methods...")
+                
+                try:
+                    # Fallback to simpler methods
+                    explainer.explain_image(
+                        sample_path,
+                        methods=['gradcam', 'integrated_gradients'],  # Skip LIME and SHAP
+                        save_path=save_path
+                    )
+                    print(f"✅ Explanation saved to: {save_path} (simplified)")
+                    successful_explanations += 1
+                    
+                except Exception as e2:
+                    print(f"❌ Failed to generate explanation: {e2}")
+                    continue
+        
+        print(f"\n📊 Explanation Summary: {successful_explanations}/{len(sample_paths[:num_samples])} successful")
     
     except Exception as e:
         print(f"Error in explanation phase: {e}")
@@ -468,8 +493,8 @@ def main():
                        help='Log directory')
     
     # Explainability arguments
-    parser.add_argument('--num-explanation-samples', type=int, default=5,
-                       help='Number of samples to explain')
+    parser.add_argument('--num-explanation-samples', type=int, default=2,
+                       help='Number of samples to explain (reduced for performance)')
     
     # System arguments
     parser.add_argument('--seed', type=int, default=123,
