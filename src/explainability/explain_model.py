@@ -26,7 +26,7 @@ class ModelExplainer:
     def __init__(self, model_path, model_type='simple', num_classes=1):
         """
         Args:
-            model_path: Path to trained Keras model (.h5 file)
+            model_path: Path to trained Keras model (.hdf5 file)
             model_type: Type of model architecture (only 'simple' supported)
             num_classes: Number of classes (1 for binary classification)
         """
@@ -304,9 +304,90 @@ class ModelExplainer:
             print(f"Grad-CAM explanation failed: {e}")
             return None, None
     
+    @tf.function
+    def _compute_gradients(self, images, target_class_idx=None):
+        """Compute gradients for integrated gradients."""
+        with tf.GradientTape() as tape:
+            tape.watch(images)
+            predictions = self.model(images)
+            
+            if self.num_classes == 1:  # Binary classification
+                if target_class_idx is None or target_class_idx == 1:
+                    loss = predictions[0, 0]  # Defective class
+                else:
+                    loss = 1 - predictions[0, 0]  # OK class
+            else:
+                if target_class_idx is None:
+                    target_class_idx = tf.argmax(predictions[0])
+                loss = predictions[0, target_class_idx]
+        
+        return tape.gradient(loss, images)
+    
+    def explain_with_integrated_gradients(self, image, target_class_idx=None, m_steps=50, batch_size=32):
+        """Generate Integrated Gradients explanation for TensorFlow model."""
+        # Preprocess image
+        if isinstance(image, str):
+            image = np.array(Image.open(image).convert('L'))  # Load as grayscale
+        
+        # Ensure proper format
+        if len(image.shape) == 2:
+            image = np.expand_dims(image, axis=-1)
+        
+        # Resize if needed
+        if image.shape[:2] != self.input_shape[:2]:
+            image = cv2.resize(image.squeeze(), self.input_shape[:2])
+            image = np.expand_dims(image, axis=-1)
+        
+        # Normalize
+        if image.max() > 1.0:
+            image = image / 255.0
+        
+        # Convert to tensor
+        image_tensor = tf.convert_to_tensor(np.expand_dims(image, axis=0), dtype=tf.float32)
+        
+        # Create baseline (black image)
+        baseline = tf.zeros_like(image_tensor)
+        
+        try:
+            # Generate m_steps interpolated images between baseline and input
+            alphas = tf.linspace(start=0.0, stop=1.0, num=m_steps+1)
+            
+            # Initialize integrated gradients
+            integrated_gradients = tf.zeros_like(image_tensor)
+            
+            # Process in batches to avoid memory issues
+            for i in range(0, len(alphas), batch_size):
+                alpha_batch = alphas[i:i+batch_size]
+                
+                # Create interpolated images
+                interpolated_images = []
+                for alpha in alpha_batch:
+                    interpolated = baseline + alpha * (image_tensor - baseline)
+                    interpolated_images.append(interpolated[0])  # Remove batch dimension
+                
+                if interpolated_images:
+                    interpolated_batch = tf.stack(interpolated_images)
+                    
+                    # Compute gradients for this batch
+                    gradients = self._compute_gradients(interpolated_batch, target_class_idx)
+                    
+                    # Accumulate gradients
+                    if gradients is not None:
+                        integrated_gradients += tf.reduce_sum(gradients, axis=0, keepdims=True)
+            
+            # Average and scale by input difference
+            integrated_gradients = integrated_gradients / len(alphas)
+            integrated_gradients = integrated_gradients * (image_tensor - baseline)
+            
+            return integrated_gradients.numpy()[0], image_tensor.numpy()[0]
+            
+        except Exception as e:
+            print(f"Integrated Gradients explanation failed: {e}")
+            return None, None
+    
     def visualize_explanations(self, image, explanations, save_path=None):
         """Visualize different explanations for TensorFlow models."""
-        fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+        fig, axes = plt.subplots(3, 3, figsize=(18, 15))
         
         # Preprocess original image for display
         if isinstance(image, str):
@@ -395,17 +476,42 @@ class ModelExplainer:
             axes[1, 0].axis('off')
             plt.colorbar(im, ax=axes[1, 0], shrink=0.8)
         else:
-            axes[1, 0].text(0.5, 0.5, 'Grad-CAM\n(Sequential Model\nLimitation)', 
+            axes[1, 0].text(0.5, 0.5, 'Grad-CAM\nNot Available', 
                            ha='center', va='center', transform=axes[1, 0].transAxes, fontsize=10)
             axes[1, 0].set_title('Grad-CAM')
             axes[1, 0].axis('off')
         
+        # Integrated Gradients
+        if 'integrated_gradients' in explanations and explanations['integrated_gradients'][0] is not None:
+            ig_attr, _ = explanations['integrated_gradients']
+            
+            # Handle different shapes
+            if len(ig_attr.shape) == 3:
+                ig_attr = np.mean(ig_attr, axis=-1)
+            
+            # Enhanced visualization with better scaling
+            vmax = max(abs(ig_attr.min()), abs(ig_attr.max()))
+            if vmax > 0:
+                im = axes[1, 1].imshow(ig_attr, cmap='RdBu_r', vmin=-vmax, vmax=vmax)
+                cbar = plt.colorbar(im, ax=axes[1, 1], shrink=0.8)
+                cbar.set_label('Attribution', rotation=270, labelpad=20)
+            else:
+                axes[1, 1].imshow(ig_attr, cmap='RdBu_r')
+                
+            axes[1, 1].set_title('Integrated Gradients')
+            axes[1, 1].axis('off')
+        else:
+            axes[1, 1].text(0.5, 0.5, 'Integrated Gradients\nNot Available', 
+                           ha='center', va='center', transform=axes[1, 1].transAxes, fontsize=10)
+            axes[1, 1].set_title('Integrated Gradients')
+            axes[1, 1].axis('off')
+        
         # Prediction probabilities
-        axes[1, 1].bar(range(len(prediction)), prediction)
-        axes[1, 1].set_xticks(range(len(prediction)))
-        axes[1, 1].set_xticklabels(self.class_names)
-        axes[1, 1].set_title('Prediction Probabilities')
-        axes[1, 1].set_ylabel('Probability')
+        axes[1, 2].bar(range(len(prediction)), prediction)
+        axes[1, 2].set_xticks(range(len(prediction)))
+        axes[1, 2].set_xticklabels(self.class_names)
+        axes[1, 2].set_title('Prediction Probabilities')
+        axes[1, 2].set_ylabel('Probability')
         
         # CNN Architecture info with layer-by-layer details
         total_params = self.model.count_params()
@@ -450,11 +556,57 @@ class ModelExplainer:
                 break
             fontweight = 'bold' if i < 2 or 'Total:' in line or 'Size:' in line else 'normal'
             fontsize = 10 if i < 2 else 8
-            axes[1, 2].text(0.05, y_pos, line, fontweight=fontweight, fontsize=fontsize, 
-                           transform=axes[1, 2].transAxes, family='monospace')
+            axes[2, 0].text(0.05, y_pos, line, fontweight=fontweight, fontsize=fontsize, 
+                           transform=axes[2, 0].transAxes, family='monospace')
         
-        axes[1, 2].set_title('CNN Architecture', fontweight='bold', fontsize=12)
-        axes[1, 2].axis('off')
+        axes[2, 0].set_title('CNN Architecture', fontweight='bold', fontsize=12)
+        axes[2, 0].axis('off')
+        
+        # Feature importance summary
+        feature_summary = []
+        if 'lime' in explanations and explanations['lime'] is not None:
+            feature_summary.append('✓ LIME: Local feature importance')
+        if 'shap' in explanations and explanations['shap'][0] is not None:
+            feature_summary.append('✓ SHAP: Shapley values')
+        if 'gradcam' in explanations and explanations['gradcam'][0] is not None:
+            feature_summary.append('✓ Grad-CAM: Convolutional attention')
+        if 'integrated_gradients' in explanations and explanations['integrated_gradients'][0] is not None:
+            feature_summary.append('✓ Integrated Gradients: Pixel attribution')
+        
+        summary_text = 'Explainability Methods:\n' + '\n'.join(feature_summary)
+        axes[2, 1].text(0.05, 0.95, summary_text, transform=axes[2, 1].transAxes, 
+                       verticalalignment='top', fontsize=11, fontweight='bold')
+        axes[2, 1].set_title('Methods Summary')
+        axes[2, 1].axis('off')
+        
+        # Model performance metrics (if available)
+        perf_text = [
+            'Model Performance:',
+            '─────────────────',
+            'Architecture: Simple CNN',
+            'Input: 300×300 Grayscale',
+            'Classes: OK vs Defective',
+            'Output: Sigmoid Probability',
+            '',
+            'Explainability Coverage:',
+            f'• Local: {"✓" if "lime" in explanations else "✗"}',
+            f'• Global: {"✓" if "shap" in explanations else "✗"}',
+            f'• Attention: {"✓" if "gradcam" in explanations else "✗"}',
+            f'• Attribution: {"✓" if "integrated_gradients" in explanations else "✗"}'
+        ]
+        
+        y_start = 0.98
+        for i, line in enumerate(perf_text):
+            y_pos = y_start - (i * 0.07)
+            if y_pos < 0.02:
+                break
+            fontweight = 'bold' if i < 2 or 'Explainability' in line else 'normal'
+            fontsize = 11 if i < 2 else 9
+            axes[2, 2].text(0.05, y_pos, line, fontweight=fontweight, fontsize=fontsize, 
+                           transform=axes[2, 2].transAxes, family='monospace')
+        
+        axes[2, 2].set_title('Analysis Summary')
+        axes[2, 2].axis('off')
         
         plt.tight_layout()
         
@@ -496,6 +648,14 @@ class ModelExplainer:
                 print(f"Grad-CAM failed: {e}")
                 explanations['gradcam'] = (None, None)
         
+        if 'integrated_gradients' in methods:
+            print("Generating Integrated Gradients explanation...")
+            try:
+                explanations['integrated_gradients'] = self.explain_with_integrated_gradients(image_path)
+            except Exception as e:
+                print(f"Integrated Gradients failed: {e}")
+                explanations['integrated_gradients'] = (None, None)
+        
         # Visualize results
         self.visualize_explanations(image_path, explanations, save_path)
         
@@ -506,11 +666,11 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Explain TensorFlow model predictions')
-    parser.add_argument('--model-path', required=True, help='Path to trained Keras model (.h5)')
+    parser.add_argument('--model-path', required=True, help='Path to trained Keras model (.hdf5)')
     parser.add_argument('--image-path', required=True, help='Path to image to explain')
     parser.add_argument('--model-type', default='simple', help='Model architecture (simple only)')
     parser.add_argument('--methods', nargs='+', 
-                       default=['lime', 'shap', 'gradcam'],
+                       default=['lime', 'shap', 'gradcam', 'integrated_gradients'],
                        help='Explanation methods to use')
     parser.add_argument('--save-path', help='Path to save explanation visualization')
     
