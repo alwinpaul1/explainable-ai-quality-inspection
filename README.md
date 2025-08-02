@@ -133,19 +133,12 @@ docker-compose build
 
 #### ✅ Super Simple Docker Commands
 
-**Main Operations:**
 ```bash
-# Full pipeline (training + evaluation + data download)
+# Run full AI pipeline (complete training)
 docker-compose up ai-quality-inspection
 
-# Training only
-docker-compose up train
-
-# Evaluation only  
-docker-compose up evaluate
-
-# Explanations only
-docker-compose up explain
+# Or run and remove container after completion
+docker-compose run --rm ai-quality-inspection
 ```
 
 
