@@ -23,14 +23,6 @@ matplotlib
 seaborn
 plotly
 
-# Dashboard  
-streamlit
-fastapi
-uvicorn
-
-# System monitoring
-psutil
-GPUtil
 
 # Utils
 pyyaml
