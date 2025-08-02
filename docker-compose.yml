@@ -27,3 +27,29 @@ services:
     #           capabilities: [gpu]
     command: ["python", "main.py", "--mode", "full", "--download-data", "--epochs", "25", "--batch-size", "64"]
 
+  # Live Dashboard with Gradio
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: explainable-ai-dashboard
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results
+      - ./src:/app/src
+      - .:/app
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - PYTHONPATH=/app
+    ports:
+      - "7860:7860"  # Gradio default port
+    # For GPU support (uncomment if NVIDIA Docker is available)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    command: ["python", "dashboard.py"]
+
