@@ -15,7 +15,8 @@ This project demonstrates end-to-end machine learning pipeline development for c
 - **Class Imbalance Solution**: Comprehensive data augmentation methodology with 9 transformation techniques
 - **Model Optimization**: Training pipeline with data augmentation, regularization, and performance monitoring
 - **Visualization System**: Comprehensive analysis dashboards and model interpretation tools
-- **Docker Containerization**: Complete containerized setup with GPU support and development environment
+- **Docker Containerization**: Complete containerized setup with GPU support and live Gradio dashboard
+- **Live Dashboard**: Real-time web interface for pipeline monitoring and control
 
 ---
 
@@ -24,7 +25,8 @@ This project demonstrates end-to-end machine learning pipeline development for c
 ```
 explainable-ai-quality-inspection/
 ├── main.py                     # CLI interface for pipeline execution
-├── requirements.txt            # Dependencies: TensorFlow, LIME, SHAP, OpenCV
+├── dashboard.py                # Live Gradio web dashboard
+├── requirements.txt            # Dependencies: TensorFlow, LIME, SHAP, OpenCV, Gradio
 ├── Dockerfile                  # Docker image definition
 ├── docker-compose.yml          # Docker Compose configuration
 ├── .dockerignore               # Docker build exclusions
@@ -133,6 +135,7 @@ docker-compose build
 
 #### ✅ Super Simple Docker Commands
 
+**Main Pipeline:**
 ```bash
 # Run full AI pipeline (complete training)
 docker-compose up ai-quality-inspection
@@ -140,6 +143,21 @@ docker-compose up ai-quality-inspection
 # Or run and remove container after completion
 docker-compose run --rm ai-quality-inspection
 ```
+
+**🎯 Live Dashboard (Recommended):**
+```bash
+# Launch interactive web dashboard
+docker-compose up dashboard
+
+# Access at: http://localhost:7860
+```
+
+**🌟 Key Dashboard Features:**
+- 🚀 **Real-time Pipeline Control**: Start/stop training with custom parameters
+- 📊 **Live Monitoring**: Training curves, accuracy metrics, and progress logs
+- 🎯 **Interactive Results**: Confusion matrices, ROC curves, and performance analytics
+- 🔍 **Explainability Viewer**: LIME, SHAP, Grad-CAM, and Integrated Gradients visualizations
+- ⚙️ **Parameter Control**: Adjustable epochs, batch size, and pipeline modes
 
 
 #### For GPU Support

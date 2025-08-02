@@ -41,8 +41,8 @@ RUN mkdir -p data/casting_data results/{models,logs,explanations,reports}
 # Set permissions
 RUN chmod +x main.py
 
-# Expose port for potential web interface
-EXPOSE 8501
+# Expose ports for web interfaces
+EXPOSE 8501 7860
 
 # Default command
 CMD ["python", "main.py", "--help"]
