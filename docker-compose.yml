@@ -1,0 +1,71 @@
+services:
+  ai-quality-inspection:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: explainable-ai-quality-inspection
+    volumes:
+      # Mount data directory for persistent dataset storage
+      - ./data:/app/data
+      # Mount results directory for persistent output
+      - ./results:/app/results
+      # Mount source code for development (optional)
+      - ./src:/app/src
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - PYTHONPATH=/app
+    ports:
+      # For potential web interface
+      - "8501:8501"
+    # For GPU support (uncomment if NVIDIA Docker is available)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    command: ["python", "main.py", "--mode", "full", "--download-data", "--epochs", "25", "--batch-size", "64"]
+    
+  # Training only
+  train:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results
+      - ./src:/app/src
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - PYTHONPATH=/app
+    command: ["python", "main.py", "--mode", "train", "--epochs", "25", "--batch-size", "64"]
+
+  # Evaluation only
+  evaluate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results
+      - ./src:/app/src
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - PYTHONPATH=/app
+    command: ["python", "main.py", "--mode", "evaluate", "--model-path", "results/models/cnn_casting_inspection_model.keras"]
+
+  # Explanations only
+  explain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results
+      - ./src:/app/src
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - PYTHONPATH=/app
+    command: ["python", "main.py", "--mode", "explain", "--model-path", "results/models/cnn_casting_inspection_model.keras"]
+

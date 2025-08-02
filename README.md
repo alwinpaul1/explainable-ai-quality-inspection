@@ -15,6 +15,7 @@ This project demonstrates end-to-end machine learning pipeline development for c
 - **Class Imbalance Solution**: Comprehensive data augmentation methodology with 9 transformation techniques
 - **Model Optimization**: Training pipeline with data augmentation, regularization, and performance monitoring
 - **Visualization System**: Comprehensive analysis dashboards and model interpretation tools
+- **Docker Containerization**: Complete containerized setup with GPU support and development environment
 
 ---
 
@@ -24,6 +25,9 @@ This project demonstrates end-to-end machine learning pipeline development for c
 explainable-ai-quality-inspection/
 ├── main.py                     # CLI interface for pipeline execution
 ├── requirements.txt            # Dependencies: TensorFlow, LIME, SHAP, OpenCV
+├── Dockerfile                  # Docker image definition
+├── docker-compose.yml          # Docker Compose configuration
+├── .dockerignore               # Docker build exclusions
 ├── src/                        # Source code modules
 │   ├── data/
 │   │   └── dataset.py            # Data loading and preprocessing pipeline
@@ -35,11 +39,11 @@ explainable-ai-quality-inspection/
 │   │   └── evaluate_model.py     # Performance evaluation and metrics
 │   └── explainability/
 │       └── explain_model.py      # Explainability method implementations
-├── data/                       # Dataset storage
+├── data/                       # Dataset storage (mounted volume)
 │   └── casting_data/casting_data/ # Industrial casting images (7,348 samples)
 │       ├── train/                # Training set (6,633 images)
 │       └── test/                 # Test set (715 images)
-└── results/                    # Output artifacts
+└── results/                    # Output artifacts (mounted volume)
     ├── models/                   # Trained model files
     ├── logs/                     # Training metrics and plots
     ├── explanations/             # Explainability visualizations
@@ -109,13 +113,63 @@ Sequential([
 
 ## Setup and Usage
 
-### Environment Requirements
+### Option 1: Docker (Recommended)
+
+The easiest way to run the application is using Docker, which provides a consistent environment across different systems.
+
+#### Prerequisites
+- Docker - [Install Docker](https://docs.docker.com/get-docker/)
+- Docker Compose - Usually included with Docker Desktop
+- NVIDIA Docker (for GPU support) - [Install NVIDIA Docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+
+#### Quick Start with Docker
+```bash
+git clone https://github.com/alwinpaul1/explainable-ai-quality-inspection.git
+cd explainable-ai-quality-inspection
+
+# Build all services
+docker-compose build
+```
+
+#### ✅ Super Simple Docker Commands
+
+**Main Operations:**
+```bash
+# Full pipeline (training + evaluation + data download)
+docker-compose up ai-quality-inspection
+
+# Training only
+docker-compose up train
+
+# Evaluation only  
+docker-compose up evaluate
+
+# Explanations only
+docker-compose up explain
+```
+
+
+#### For GPU Support
+Uncomment the GPU configuration in `docker-compose.yml`:
+```yaml
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: 1
+          capabilities: [gpu]
+```
+
+### Option 2: Local Installation
+
+#### Environment Requirements
 - Python 3.8+
 - TensorFlow 2.13+
 - GPU support (CUDA/MPS) automatically detected
 - Memory: 4GB minimum, 8GB recommended
 
-### Installation
+#### Installation
 ```bash
 git clone https://github.com/alwinpaul1/explainable-ai-quality-inspection.git
 cd explainable-ai-quality-inspection
