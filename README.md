@@ -167,12 +167,14 @@ deploy:
 git clone https://github.com/alwinpaul1/explainable-ai-quality-inspection.git
 cd explainable-ai-quality-inspection
 
-# Create virtual environment
-python -m venv venv
+# Create virtual environment with uv
+uv venv venv
+
+# Activate virtual environment
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies with uv
+uv pip install -r requirements.txt
 ```
 
 ---
