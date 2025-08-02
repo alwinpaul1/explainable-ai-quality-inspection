@@ -23,8 +23,8 @@ matplotlib
 seaborn
 plotly
 
-# Dashboard
-gradio
+# Dashboard  
+streamlit>=1.32.0
 fastapi
 uvicorn
 
